@@ -21,10 +21,16 @@ $stmt->execute();
 $borrow_count_result = $stmt->get_result();
 $borrowed_items = $borrow_count_result->fetch_assoc()['borrowed_items'];
 
-if (isset($_POST['borrow_id'])) {
-    if ($borrowed_items < 5) { // ✅ Borrow limit check
-        $borrow_id = $_POST['borrow_id'];
+// ✅ Handle Borrowing Requests
+if (isset($_POST['borrow_id']) && isset($_POST['return_date'])) {
+    $borrow_id = $_POST['borrow_id'];
+    $return_date = $_POST['return_date'];
 
+    // ✅ Validate that return_date is within 3 days
+    $max_return_date = date('Y-m-d', strtotime('+3 days'));
+    if ($return_date < date('Y-m-d') || $return_date > $max_return_date) {
+        $_SESSION['confirmation_message'] = "❌ Error: Invalid return date! Pick a date within 3 days.";
+    } else {
         // ✅ Step 1: Check available stock
         $stock_query = "SELECT stock FROM equipment WHERE equipment_id = ?";
         $stmt_stock = $conn->prepare($stock_query);
@@ -40,20 +46,19 @@ if (isset($_POST['borrow_id'])) {
             $stmt_stock_update->bind_param("i", $borrow_id);
             $stmt_stock_update->execute();
 
-            // ✅ Step 3: Insert borrow transaction
-            $log_query = "INSERT INTO borrow_transactions (member_id, equipment_id, status, borrow_date) VALUES (?, ?, 'Borrowed', NOW())";
+            // ✅ Step 3: Insert borrow transaction with user-selected return date
+            $log_query = "INSERT INTO borrow_transactions (member_id, equipment_id, status, borrow_date, return_date) 
+                          VALUES (?, ?, 'Borrowed', NOW(), ?)";
             $log_stmt = $conn->prepare($log_query);
-            $log_stmt->bind_param("ii", $member_id, $borrow_id);
+            $log_stmt->bind_param("iis", $member_id, $borrow_id, $return_date);
             $log_stmt->execute();
 
-            $_SESSION['confirmation_message'] = "Borrow successful! Stock updated.";
+            $_SESSION['confirmation_message'] = "✅ Borrow successful! Return by " . $_POST['return_date'];
             header("Location: view_equipment.php");
             exit();
         } else {
-            $_SESSION['confirmation_message'] = "This item is out of stock!";
+            $_SESSION['confirmation_message'] = "❌ This item is out of stock!";
         }
-    } else {
-        $_SESSION['confirmation_message'] = "Borrow limit reached! You can only have 5 items at a time.";
     }
 }
 ?>
@@ -77,6 +82,7 @@ if (isset($_POST['borrow_id'])) {
     </style>
 </head>
 <body>
+
 <header>
     <div><strong>Sports Club</strong></div>
     <nav>
@@ -86,7 +92,6 @@ if (isset($_POST['borrow_id'])) {
         <a href="logout.php">Logout</a>
     </nav>
 </header>
-    
 
 <div class="container">
     <h2>Available Equipment</h2>
@@ -102,7 +107,8 @@ if (isset($_POST['borrow_id'])) {
                 <th>ID</th>
                 <th>Name</th>
                 <th>Status</th>
-                <th>Stock</th> <!-- ✅ Stock column added -->
+                <th>Stock</th>
+                <th>Return By</th> <!-- ✅ User selects return date -->
                 <th>Action</th>
             </tr>
         </thead>
@@ -112,11 +118,14 @@ if (isset($_POST['borrow_id'])) {
                 <td><?php echo htmlspecialchars($row['equipment_id']); ?></td>
                 <td><?php echo htmlspecialchars($row['name']); ?></td>
                 <td><?php echo htmlspecialchars($row['status']); ?></td>
-                <td><?php echo htmlspecialchars($row['stock']); ?></td> <!-- ✅ Stock displayed -->
+                <td><?php echo htmlspecialchars($row['stock']); ?></td>
                 <td>
                     <form method="POST">
                         <input type="hidden" name="borrow_id" value="<?php echo $row['equipment_id']; ?>">
-                        <button type="submit" <?php echo ($borrowed_items >= 5 || $row['stock'] <= 0) ? 'disabled' : ''; ?>>
+                        <input type="date" name="return_date" required 
+                               min="<?= date('Y-m-d'); ?>" 
+                               max="<?= date('Y-m-d', strtotime('+3 days')); ?>">
+                        <button type="submit" <?= ($borrowed_items >= 5 || $row['stock'] <= 0) ? 'disabled' : ''; ?>>
                             Borrow
                         </button>
                     </form>

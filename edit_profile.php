@@ -43,7 +43,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 }
 
 // Borrowing history
-$history_query = "SELECT b.borrow_date, b.returned_date, e.name, b.status 
+// ✅ Fetch borrowing history
+$history_query = "SELECT b.borrow_date, b.return_date, b.returned_date, e.name, b.status 
                   FROM borrow_transactions b
                   JOIN equipment e ON b.equipment_id = e.equipment_id
                   WHERE b.member_id = ? ORDER BY b.borrow_date DESC";
@@ -242,27 +243,30 @@ $history_result = $stmt->get_result();
     <button class="toggle-btn" onclick="toggleHistory()">View Borrowing History</button>
 
     <div id="historySection" class="hidden">
-        <h2>Your Borrowing History</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Equipment Name</th>
-                    <th>Status</th>
-                    <th>Borrowed Date</th>
-                    <th>Returned Date</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php while ($row = $history_result->fetch_assoc()) { ?>
-                    <tr>
-                        <td><?php echo htmlspecialchars($row['name']); ?></td>
-                        <td><?php echo htmlspecialchars($row['status']); ?></td>
-                        <td><?php echo htmlspecialchars($row['borrow_date']); ?></td>
-                        <td><?php echo $row['returned_date'] ? htmlspecialchars($row['returned_date']) : 'Not Returned'; ?></td>
-                    </tr>
-                <?php } ?>
-            </tbody>
-        </table>
+       <h2>Your Borrowing History</h2>
+<table>
+    <thead>
+        <tr>
+            <th>Equipment Name</th>
+            <th>Status</th>
+            <th>Borrowed Date</th>
+            <th>Return Deadline</th>
+            <th>Returned Date</th>
+        </tr>
+    </thead>
+    <tbody>
+        <?php while ($row = $history_result->fetch_assoc()) { 
+            $overdue = ($row['status'] == 'borrowed' && $row['return_date'] < date('Y-m-d')) ? 'overdue' : ''; ?>
+            <tr class="<?= $overdue ?>">
+                <td><?php echo htmlspecialchars($row['name']); ?></td>
+                <td><?php echo htmlspecialchars($row['status']); ?></td>
+                <td><?php echo htmlspecialchars($row['borrow_date']); ?></td>
+                <td><?php echo htmlspecialchars($row['return_date']); ?></td>
+                <td><?php echo $row['returned_date'] ? htmlspecialchars($row['returned_date']) : 'Not Returned'; ?></td>
+            </tr>
+        <?php } ?>
+    </tbody>
+</table>
     </div>
 </div>
 
