@@ -6,42 +6,50 @@ if (!$conn) {
     die("❌ Database connection failed: " . mysqli_connect_error());
 }
 
+// ✅ Pre-fill login fields using cookies
+$email_cookie = isset($_COOKIE['email']) ? $_COOKIE['email'] : '';
+$password_cookie = isset($_COOKIE['password']) ? $_COOKIE['password'] : '';
+
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $email = $_POST['email'];
     $password = $_POST['password'];
+    $remember = isset($_POST['remember']); // ✅ Check if "Remember Me" is checked
 
+    // ✅ Fetch user details
     $query = "SELECT user_id, username, email, password, role, verified FROM users WHERE email = ?";
     $stmt = $conn->prepare($query);
-    
-    if (!$stmt) {
-        die("❌ Query Preparation Failed: " . $conn->error);
-    }
-
     $stmt->bind_param("s", $email);
-    if (!$stmt->execute()) {
-        die("❌ Query Execution Failed: " . $stmt->error);
-    }
-
+    $stmt->execute();
     $result = $stmt->get_result();
     $user = $result->fetch_assoc();
     $stmt->close();
 
     if ($user) {
         if ($user['verified'] == 0) {
-            $error = "Account not verified. Please check your email.";
+            $error = "❌ Account not verified. Please check your email.";
         } elseif (password_verify($password, $user['password'])) {
             $_SESSION['user_id'] = $user['user_id'];
             $_SESSION['username'] = $user['username'];
             $_SESSION['email'] = $user['email'];
             $_SESSION['role'] = $user['role'];
 
+            // ✅ Store login credentials in cookies if "Remember Me" is checked
+            if ($remember) {
+                setcookie("email", $email, time() + (86400 * 30), "/"); // Store for 30 days
+                setcookie("password", $password, time() + (86400 * 30), "/"); // Store for 30 days
+            } else {
+                // ✅ Clear cookies if "Remember Me" is unchecked
+                setcookie("email", "", time() - 3600, "/");
+                setcookie("password", "", time() - 3600, "/");
+            }
+
             header("Location: " . ($user['role'] === 'admin' ? "admin_panel.php" : "member_dashboard.php"));
             exit();
         } else {
-            $error = "Invalid password.";
+            $error = "❌ Invalid password.";
         }
     } else {
-        $error = "User not found.";
+        $error = "❌ User not found.";
     }
 }
 ?>
@@ -153,22 +161,22 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <div class="login-box">
             <div class="login-left">
                 <h2>Sports Club</h2>
-                <p>A Sports Club Management System in Northern Bukidnon State College</p>
+                <p>Your Digital Locker Room for Easy Equipment Access!</p>
             </div>
             <div class="login-right">
                 <h3>Login</h3>
                 <?php if (!empty($error)) echo "<p class='error'>$error</p>"; ?>
-                <?php if (isset($_GET['registration_success'])) echo "<p style='color: green;'>Registration successful! Please log in.</p>"; ?>
+                <?php if (isset($_GET['registration_success'])) echo "<p style='color: green;'>✅ Registration successful! Please log in.</p>"; ?>
                 
                 <form method="POST">
                     <div class="form-control">
-                        <input type="email" name="email" placeholder="Username" required>
+                        <input type="email" name="email" placeholder="Email" required value="<?php echo $email_cookie; ?>">
                     </div>
                     <div class="form-control">
-                        <input type="password" name="password" placeholder="Password" required>
+                        <input type="password" name="password" placeholder="Password" required value="<?php echo $password_cookie; ?>">
                     </div>
                     <div class="form-options">
-                        <label><input type="checkbox" name="remember"> Remember</label>
+                        <label><input type="checkbox" name="remember" <?php echo isset($_COOKIE['email']) ? 'checked' : ''; ?>> Remember Me</label>
                     </div>
                     <div class="form-button">
                         <button type="submit">Login</button>

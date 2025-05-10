@@ -251,7 +251,7 @@ $history_result = $stmt->get_result();
             <th>Status</th>
             <th>Borrowed Date</th>
             <th>Return Deadline</th>
-            <th>Returned Date</th>
+            <th>Status</th>
         </tr>
     </thead>
     <tbody>
