@@ -7,11 +7,9 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') {
     exit();
 }
 
-// ✅ Handle member deletion (Ensures removal from both `members` and `users`)
 if (isset($_POST['delete_member_id'])) {
     $delete_id = intval($_POST['delete_member_id']);
 
-    // ✅ Check if member has borrow transactions
     $check_borrow_query = "SELECT COUNT(*) FROM borrow_transactions WHERE member_id = ?";
     $stmt_check = $conn->prepare($check_borrow_query);
     $stmt_check->bind_param("i", $delete_id);
@@ -21,27 +19,24 @@ if (isset($_POST['delete_member_id'])) {
     $stmt_check->close();
 
     if ($count > 0) {
-        $message = "<p class='error'>Cannot delete member. They have active borrow transactions!</p>";
+        $message = "<p class='message error'>Cannot delete member. They have active borrow transactions!</p>";
     } else {
-        // ✅ First, delete from `members`
         $delete_members_query = "DELETE FROM members WHERE user_id = ?";
         $stmt_delete_members = $conn->prepare($delete_members_query);
         $stmt_delete_members->bind_param("i", $delete_id);
         $stmt_delete_members->execute();
         $stmt_delete_members->close();
 
-        // ✅ Then, delete from `users` (Ensures login removal)
         $delete_users_query = "DELETE FROM users WHERE user_id = ?";
         $stmt_delete_users = $conn->prepare($delete_users_query);
         $stmt_delete_users->bind_param("i", $delete_id);
         $stmt_delete_users->execute();
         $stmt_delete_users->close();
 
-        $message = "<p class='success'>Member deleted successfully!</p>";
+        $message = "<p class='message success'>Member deleted successfully!</p>";
     }
 }
 
-// ✅ Fetch all members
 $query = "SELECT user_id, full_name, email, role, joined_date FROM members";
 $result = $conn->query($query);
 ?>
@@ -54,9 +49,8 @@ $result = $conn->query($query);
     <style>
         body {
             margin: 0;
-            font-family: Arial, sans-serif;
-            background: #f4f4f4;
-            padding: 20px;
+            font-family: 'Segoe UI', sans-serif;
+            background: #eef1f5;
             display: flex;
         }
 
@@ -67,8 +61,8 @@ $result = $conn->query($query);
             padding: 20px;
             height: 100vh;
             position: fixed;
-            left: 0;
             top: 0;
+            left: 0;
         }
 
         .sidebar a {
@@ -85,83 +79,121 @@ $result = $conn->query($query);
         }
 
         .container {
-            max-width: 800px;
-            margin: auto;
-            padding-left: 270px; /* Push content right */
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-left: 270px;
+            padding: 30px;
+            width: 100%;
         }
 
         h2 {
             text-align: center;
+            color: #003366;
+            margin-bottom: 20px;
         }
 
         .message {
             text-align: center;
-            font-weight: bold;
-            margin-bottom: 10px;
+            font-weight: 600;
+            padding: 12px 20px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            width: 60%;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .message.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
         }
 
         th, td {
-            padding: 10px;
-            border: 1px solid #ddd;
+            padding: 12px 15px;
+            border-bottom: 1px solid #ddd;
             text-align: center;
         }
 
         th {
             background: #003366;
             color: white;
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background: #f9f9f9;
         }
 
         .delete-btn {
-            background: red;
+            background: #dc3545;
             color: white;
             border: none;
-            padding: 8px 12px;
-            cursor: pointer;
+            padding: 8px 14px;
             border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
         }
 
         .delete-btn:hover {
-            background: darkred;
+            background: #c82333;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin-left: 0;
+                padding: 15px;
+            }
+
+            .sidebar {
+                position: relative;
+                width: 100%;
+                height: auto;
+            }
         }
     </style>
 </head>
 <body>
 
-<!-- ✅ Sidebar -->
-<div class="sidebar">
-    <h2>Admin Panel</h2>
+<div class="sidebar" id="sidebar">
+    <h2><a href="admin_panel.php">Admin Panel</a></h2>
     <a href="manage_members.php">Manage Members</a>
     <a href="manage_equipment.php">Manage Equipment</a>
-    <a href="post_announcements.php">Manage Announcements</a>
+    <a href="post_announcements.php">Post Announcements</a>
     <a href="view_reports.php">View Reports</a>
     <a href="settings.php">System Settings</a>
     <a href="logout.php">Logout</a>
 </div>
 
-<!-- ✅ Main Content -->
 <div class="container">
     <h2>Manage Members</h2>
-    
-    <?php if (isset($message)) echo "<div class='message'>$message</div>"; ?>
+
+    <?php if (isset($message)) echo $message; ?>
 
     <table>
-        <tr>
-            <th>Full Name</th>
-            <th>Email</th>
-            <th>Role</th>
-            <th>Joined Date</th>
-            <th>Action</th>
-        </tr>
+        <thead>
+            <tr>
+                <th>Full Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Joined Date</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
         <?php while ($row = $result->fetch_assoc()): ?>
             <tr>
                 <td><?= htmlspecialchars($row['full_name']); ?></td>
@@ -176,6 +208,7 @@ $result = $conn->query($query);
                 </td>
             </tr>
         <?php endwhile; ?>
+        </tbody>
     </table>
 </div>
 

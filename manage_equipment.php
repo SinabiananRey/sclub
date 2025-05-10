@@ -32,130 +32,213 @@ $equipment_result = $conn->query($equipment_query);
 ?>
 
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Manage Equipment | Admin Panel</title>
+    <meta charset="UTF-8">
+    <title>Manage Equipment | Sports Club</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f6f9;
             margin: 0;
-            padding: 0;
+            font-family: 'Segoe UI', sans-serif;
+            background: #eef1f5;
+            display: flex;
+        }
+
+        .sidebar {
+            width: 250px;
+            background: #003366;
+            color: white;
+            padding: 20px;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .sidebar a {
+            display: block;
+            color: white;
+            text-decoration: none;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        .sidebar a:hover {
+            background: #0055aa;
         }
 
         .container {
-            width: 90%;
-            max-width: 1000px;
-            margin: 40px auto;
-            background: #fff;
+            margin-left: 270px;
             padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            width: 100%;
         }
 
-        h2, h3 {
+        h2 {
+            text-align: center;
             color: #003366;
+            margin-bottom: 20px;
+        }
+
+        .message {
+            text-align: center;
+            font-weight: 600;
+            padding: 12px 20px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            width: 60%;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .message.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
         }
 
         th, td {
             padding: 12px 15px;
-            border-bottom: 1px solid #ccc;
-            text-align: left;
-        }
-
-        th {
-            background-color: #003366;
-            color: #fff;
-        }
-
-        tr:hover {
-            background-color: #f1f1f1;
-        }
-
-        a {
-            color: #007bff;
-            text-decoration: none;
-        }
-
-        a:hover {
-            text-decoration: underline;
-        }
-
-        .btn-delete {
-            background-color: #ff4d4d;
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        .btn-delete:hover {
-            background-color: #cc0000;
-        }
-
-        form {
-            margin-top: 30px;
-        }
-
-        label {
-            display: block;
-            margin-top: 10px;
-            font-weight: bold;
-        }
-
-        input[type="text"],
-        input[type="number"],
-        select {
-            width: 100%;
-            padding: 8px;
-            margin-top: 5px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-        }
-
-        button[type="submit"] {
-            margin-top: 15px;
-            background-color: #003366;
-            color: white;
-            border: none;
-            padding: 10px 16px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-
-        button[type="submit"]:hover {
-            background-color: #0055a5;
-        }
-
-        .message {
-            margin: 10px 0;
-            color: green;
-            font-weight: bold;
+            border-bottom: 1px solid #ddd;
             text-align: center;
         }
 
-        .back-link {
-            display: inline-block;
-            margin-top: 20px;
-            color: #003366;
+        th {
+            background: #003366;
+            color: white;
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+
+        .delete-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .delete-btn:hover {
+            background: #c82333;
+        }
+
+        .toggle-btn {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: #003366;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            font-size: 18px;
+            z-index: 1000;
+            display: none;
+        }
+
+        .form-wrapper {
+            max-width: 700px;
+            margin: 40px auto;
+        }
+
+        .form-wrapper table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+
+        .form-wrapper th, .form-wrapper td {
+            padding: 14px 16px;
+            border-bottom: 1px solid #ddd;
+            text-align: left;
+        }
+
+        .form-wrapper th {
+            background: #003366;
+            color: white;
+        }
+
+        .form-wrapper input, .form-wrapper select {
+            width: 100%;
+            padding: 8px;
+            font-size: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .submit-btn {
+            background-color:  #003366;
+            color: white;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 15px;
+            width: 50%;
+            transition: background 0.3s;
+        }
+
+        .submit-btn:hover {
+            background-color: #218838;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin-left: 0;
+                padding: 15px;
+            }
+
+            .sidebar {
+                display: none;
+                position: relative;
+                width: 100%;
+                height: auto;
+            }
+
+            .toggle-btn {
+                display: block;
+            }
         }
     </style>
 </head>
 <body>
 
+<!-- Sidebar -->
+<div class="sidebar" id="sidebar">
+    <h2><a href="admin_panel.php" style="color:white; text-decoration:none;">Admin Panel</a></h2>
+    <a href="manage_members.php">Manage Members</a>
+    <a href="manage_equipment.php">Manage Equipment</a>
+    <a href="post_announcements.php">Post Announcements</a>
+    <a href="view_reports.php">View Reports</a>
+    <a href="settings.php">System Settings</a>
+    <a href="logout.php">Logout</a>
+</div>
+
+<!-- Toggle button for small screens -->
+<button class="toggle-btn" onclick="toggleSidebar()">☰</button>
+
+<!-- Main Content -->
 <div class="container">
     <h2>Manage Equipment</h2>
 
     <?php if (isset($_SESSION['confirmation_message'])): ?>
-        <div class="message"><?php echo $_SESSION['confirmation_message']; unset($_SESSION['confirmation_message']); ?></div>
+        <div class="message success"><?php echo $_SESSION['confirmation_message']; unset($_SESSION['confirmation_message']); ?></div>
     <?php endif; ?>
 
     <table>
@@ -175,33 +258,55 @@ $equipment_result = $conn->query($equipment_query);
                 <td>
                     <a href="edit_equipment.php?id=<?php echo $row['equipment_id']; ?>">Edit</a> |
                     <a href="manage_equipment.php?delete_id=<?php echo $row['equipment_id']; ?>" onclick="return confirm('Are you sure?')">
-                        <button class="btn-delete">Delete</button>
+                        <button class="delete-btn">Delete</button>
                     </a>
                 </td>
             </tr>
         <?php } ?>
     </table>
 
-    <h3>Add New Equipment</h3>
-    <form method="POST" action="add_equipment.php">
-        <label>Name:</label>
-        <input type="text" name="name" required>
-
-        <label>Stock:</label>
-        <input type="number" name="stock" required>
-
-        <label>Status:</label>
-        <select name="status">
-            <option value="Available">Available</option>
-            <option value="Borrowed">Borrowed</option>
-            <option value="Maintenance">Under Maintenance</option>
-        </select>
-
-        <button type="submit">Add Equipment</button>
-    </form>
-
-    <a class="back-link" href="admin_panel.php">← Back to Admin Panel</a>
+    <h3 style="text-align:center; margin-top:40px; color:#003366;">Add New Equipment</h3>
+    <div class="form-wrapper">
+        <form method="POST" action="add_equipment.php">
+            <table>
+                <tr>
+                    <th>Field</th>
+                    <th>Input</th>
+                </tr>
+                <tr>
+                    <td>Name:</td>
+                    <td><input type="text" name="name" required></td>
+                </tr>
+                <tr>
+                    <td>Stock:</td>
+                    <td><input type="number" name="stock" required></td>
+                </tr>
+                <tr>
+                    <td>Status:</td>
+                    <td>
+                        <select name="status">
+                            <option value="Available">Available</option>
+                            <option value="Borrowed">Borrowed</option>
+                            <option value="Maintenance">Under Maintenance</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2" style="text-align:center;">
+                        <button type="submit" class="submit-btn">Add Equipment</button>
+                    </td>
+                </tr>
+            </table>
+        </form>
+    </div>
 </div>
+
+<script>
+    function toggleSidebar() {
+        var sidebar = document.getElementById("sidebar");
+        sidebar.style.display = (sidebar.style.display === "block") ? "none" : "block";
+    }
+</script>
 
 </body>
 </html>

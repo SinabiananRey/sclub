@@ -18,122 +18,171 @@ $announcement_result = $conn->query($announcement_query);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Member Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             margin: 0;
             font-family: 'Inter', sans-serif;
-            background: #f9fafb;
+            background: #f5f7fa;
             color: #333;
         }
 
         header {
             background: #1e3a8a;
-            color: #fff;
+            color: white;
             padding: 1rem 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        header div {
+            font-weight: 600;
+            font-size: 1.2rem;
         }
 
         nav a {
-            color: #fff;
-            margin-left: 1rem;
+            color: white;
+            margin-left: 1.2rem;
             text-decoration: none;
             font-weight: 500;
+            transition: opacity 0.2s ease;
         }
 
         nav a:hover {
-            text-decoration: underline;
+            opacity: 0.8;
         }
 
         .hero {
-            background: #1e3a8a;
-            color: #fff;
+            background: linear-gradient(to right, #1e3a8a, #3b82f6);
+            color: white;
             text-align: center;
-            padding: 60px 20px;
+            padding: 70px 20px;
         }
 
         .hero h1 {
-            font-size: 2rem;
+            font-size: 2.5rem;
             margin-bottom: 10px;
         }
 
         .hero p {
-            margin-bottom: 20px;
+            font-size: 1.1rem;
+            margin-bottom: 25px;
         }
 
         .hero a {
-            background: #3b82f6;
-            color: #fff;
-            padding: 10px 20px;
-            border-radius: 5px;
+            background: white;
+            color: #1e3a8a;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-weight: 600;
             text-decoration: none;
-            font-weight: 500;
+            transition: background 0.2s ease, color 0.2s ease;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+
+        .hero a:hover {
+            background: #e0e7ff;
+            color: #1d4ed8;
         }
 
         .container {
-            max-width: 800px;
-            margin: 40px auto;
+            max-width: 900px;
+            margin: 50px auto;
             padding: 0 20px;
         }
 
         .container h3 {
+            font-size: 1.5rem;
             margin-bottom: 20px;
-            text-align: center;
             color: #1e3a8a;
+            text-align: center;
         }
 
         .announcement-list {
-            list-style: none;
+            display: grid;
+            gap: 15px;
             padding: 0;
+            list-style: none;
         }
 
         .announcement-list li {
-            background: #e0e7ff;
-            margin-bottom: 10px;
-            padding: 15px;
-            border-radius: 6px;
+            background: white;
+            border-left: 6px solid #3b82f6;
+            padding: 16px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .announcement-list li:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
         }
 
         .announcement-list li strong {
+            font-size: 1.05rem;
             display: block;
-            margin-bottom: 5px;
-            font-size: 1rem;
+            margin-bottom: 6px;
+            color: #1e40af;
         }
 
         .announcement-list li span {
+            display: block;
+            margin-top: 10px;
             font-size: 0.85rem;
-            color: #555;
+            color: #6b7280;
         }
 
         .footer {
             text-align: center;
             font-size: 0.9rem;
             color: #666;
-            margin: 60px 0 20px;
+            margin: 80px 0 30px;
         }
 
         .footer a {
             color: #1e3a8a;
             text-decoration: none;
+            font-weight: 500;
         }
 
         .footer a:hover {
             text-decoration: underline;
         }
 
+        .social-icons {
+            margin-top: 10px;
+        }
+
+        .social-icons a {
+            margin: 0 10px;
+            color: #1e3a8a;
+            font-size: 1.2rem;
+            transition: color 0.2s ease;
+        }
+
+        .social-icons a:hover {
+            color: #2563eb;
+        }
+
         @media (max-width: 600px) {
-            header, .hero, .container {
-                padding: 1rem;
+            .hero h1 {
+                font-size: 2rem;
             }
 
             nav a {
-                margin-left: 0.5rem;
+                margin-left: 0.8rem;
                 font-size: 0.9rem;
             }
 
-            .hero h1 {
-                font-size: 1.5rem;
+            .container {
+                margin: 30px auto;
             }
         }
     </style>
@@ -141,7 +190,7 @@ $announcement_result = $conn->query($announcement_query);
 <body>
 
 <header>
-    <div><strong>Sports Club</strong></div>
+    <div>Sports Club</div>
     <nav>
         <a href="member_dashboard.php">Home</a>
         <a href="view_equipment.php">Equipment</a>
@@ -153,24 +202,29 @@ $announcement_result = $conn->query($announcement_query);
 <div class="hero">
     <h1>Welcome to Sports Club</h1>
     <p>Your Hub for Sports & Activities</p>
-    <a href="view_equipment.php">Borrow Now</a>
+    <a href="view_equipment.php">Borrow Equipment</a>
 </div>
 
 <div class="container">
-    <h3>Announcements</h3>
+    <h3>Latest Announcements</h3>
     <ul class="announcement-list">
         <?php while ($row = $announcement_result->fetch_assoc()) { ?>
             <li>
                 <strong><?php echo htmlspecialchars($row['title']); ?></strong>
-                <?php echo htmlspecialchars($row['content']); ?>
-                <span>(<?php echo htmlspecialchars($row['created_at']); ?>)</span>
+                <?php echo nl2br(htmlspecialchars($row['content'])); ?>
+                <span>Posted on <?php echo date('F j, Y', strtotime($row['created_at'])); ?></span>
             </li>
         <?php } ?>
     </ul>
 </div>
 
 <div class="footer">
-    <p>Need help? <a href="contact.php">Contact Support</a></p>
+    <p>Need help?</p>
+    <div class="social-icons">
+        <a href="https://facebook.com" target="_blank" title="Facebook"><i class="fab fa-facebook-f"></i></a>
+        <a href="https://instagram.com" target="_blank" title="Instagram"><i class="fab fa-instagram"></i></a>
+        <a href="https://x.com" target="_blank" title="X"><i class="fab fa-x-twitter"></i></a>
+    </div>
 </div>
 
 </body>

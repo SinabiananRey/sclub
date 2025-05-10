@@ -2,25 +2,23 @@
 session_start();
 include 'db_connect.php';
 
-// Ensure only admin users can access
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') {
     header("Location: login.php");
     exit();
 }
 
-// Fetch current settings
 $settings_query = "SELECT * FROM settings LIMIT 1";
 $settings_result = $conn->query($settings_query);
 $settings = $settings_result->fetch_assoc();
 
-// Handle updates
+$feedback = "";
+
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $club_name = $_POST['club_name'];
     $admin_email = $_POST['admin_email'];
     $borrowing_limit = $_POST['borrowing_limit'];
     $admin_password = $_POST['admin_password'];
 
-    // Fetch admin's stored password
     $user_query = "SELECT password FROM users WHERE user_id = ?";
     $stmt = $conn->prepare($user_query);
     $stmt->bind_param("i", $_SESSION['user_id']);
@@ -28,16 +26,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $result = $stmt->get_result();
     $user = $result->fetch_assoc();
 
-    // Verify password
     if (password_verify($admin_password, $user['password'])) {
         $update_query = "UPDATE settings SET club_name = ?, admin_email = ?, borrowing_limit = ?";
         $stmt = $conn->prepare($update_query);
         $stmt->bind_param("ssi", $club_name, $admin_email, $borrowing_limit);
         if ($stmt->execute()) {
-            echo "<p style='color: green;'>Settings updated successfully!</p>";
+            $feedback = "<div class='message success'>Settings updated successfully!</div>";
         }
     } else {
-        echo "<p style='color: red;'>Incorrect password. Settings update failed.</p>";
+        $feedback = "<div class='message error'>Incorrect password. Settings update failed.</div>";
     }
 }
 ?>
@@ -46,33 +43,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>System Settings | Admin Panel</title>
+    <title>System Settings | Sports Club</title>
     <style>
         body {
             margin: 0;
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f9;
-        }
-
-        .toggle-btn {
-            display: none;
-            position: absolute;
-            top: 15px;
-            left: 15px;
-            background-color: #003366;
-            color: white;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-            z-index: 1000;
-            padding: 8px 12px;
-            border-radius: 5px;
-        }
-
-        .container {
+            font-family: 'Segoe UI', sans-serif;
+            background: #eef1f5;
             display: flex;
-            height: 100vh;
         }
 
         .sidebar {
@@ -80,11 +57,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             background: #003366;
             color: white;
             padding: 20px;
-            transition: left 0.3s ease;
-        }
-
-        .sidebar h2 {
-            margin-bottom: 20px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
         }
 
         .sidebar a {
@@ -100,98 +76,105 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             background: #0055aa;
         }
 
-        .main-content {
-            flex-grow: 1;
-            padding: 20px;
-            background: #f4f4f4;
-            overflow-y: auto;
+        .container {
+            margin-left: 270px;
+            padding: 30px;
+            width: 100%;
         }
 
         h2 {
+            text-align: center;
+            color: #003366;
             margin-bottom: 20px;
         }
 
         .form-container {
+            max-width: 700px;
             background: white;
-            padding: 20px;
+            padding: 30px;
             border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin: 0 auto;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
         }
 
-        .form-container form {
-            display: flex;
-            flex-direction: column;
+        label {
+            font-weight: bold;
+            margin-top: 15px;
+            display: block;
         }
 
-        .form-container label {
-            margin-bottom: 8px;
-            font-size: 14px;
-        }
-
-        .form-container input {
-            margin-bottom: 15px;
-            padding: 8px;
-            font-size: 14px;
+        input[type="text"],
+        input[type="email"],
+        input[type="number"],
+        input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            margin-top: 8px;
             border-radius: 5px;
             border: 1px solid #ccc;
+            margin-bottom: 20px;
+            font-size: 15px;
         }
 
-        .form-container button {
-            padding: 10px 20px;
+        .submit-btn {
             background-color: #003366;
             color: white;
+            padding: 12px;
             border: none;
+            font-size: 16px;
             border-radius: 5px;
             cursor: pointer;
+            width: 100%;
         }
 
-        .form-container button:hover {
-            background-color: #45a049;
+        .submit-btn:hover {
+            background-color: #0055aa;
         }
 
-        .form-container .success {
-            color: green;
-            margin-bottom: 15px;
-        }
-
-        .form-container .error {
-            color: red;
-            margin-bottom: 15px;
-        }
-
-        .back-link {
+        .message {
             text-align: center;
-            margin-top: 20px;
+            font-weight: 600;
+            padding: 12px 20px;
+            border-radius: 6px;
+            margin-bottom: 20px;
         }
 
-        .back-link a {
-            font-size: 16px;
-            color: #333;
+        .message.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
         }
 
-        .back-link a:hover {
-            text-decoration: underline;
+        .message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .toggle-btn {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: #003366;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            font-size: 18px;
+            z-index: 1000;
+            display: none;
         }
 
         @media (max-width: 768px) {
             .container {
-                flex-direction: column;
+                margin-left: 0;
+                padding: 15px;
             }
 
             .sidebar {
-                position: absolute;
-                top: 0;
-                left: -250px;
-                height: 100%;
-                z-index: 999;
-            }
-
-            .sidebar.active {
-                left: 0;
-            }
-
-            .main-content {
-                padding-top: 60px;
+                display: none;
+                position: relative;
+                width: 100%;
+                height: auto;
             }
 
             .toggle-btn {
@@ -204,60 +187,44 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
 
+<div class="sidebar" id="sidebar">
+    <h2><a href="admin_panel.php" style="color:white; text-decoration:none;">Admin Panel</a></h2>
+    <a href="manage_members.php">Manage Members</a>
+    <a href="manage_equipment.php">Manage Equipment</a>
+    <a href="post_announcements.php">Post Announcements</a>
+    <a href="view_reports.php">View Reports</a>
+    <a href="settings.php">System Settings</a>
+    <a href="logout.php">Logout</a>
+</div>
+
 <div class="container">
-    <!-- Sidebar -->
-    <div class="sidebar" id="sidebar">
-        <h2>Admin Panel</h2>
-        <a href="manage_members.php">Manage Members</a>
-        <a href="manage_equipment.php">Manage Equipment</a>
-        <a href="post_announcements.php">Post Announcements</a>
-        <a href="view_reports.php">View Reports</a>
-        <a href="settings.php">System Settings</a>
-        <a href="logout.php">Logout</a>
-    </div>
+    <h2>System Settings</h2>
 
-    <!-- Main Content -->
-    <div class="main-content">
-        <h2>System Settings</h2>
+    <?php echo $feedback; ?>
 
-        <div class="form-container">
-            <form method="POST">
-                <label>Club Name:</label>
-                <input type="text" name="club_name" value="<?php echo $settings['club_name']; ?>" required><br>
+    <div class="form-container">
+        <form method="POST">
+            <label>Club Name:</label>
+            <input type="text" name="club_name" value="<?php echo htmlspecialchars($settings['club_name']); ?>" required>
 
-                <label>Admin Email:</label>
-                <input type="email" name="admin_email" value="<?php echo $settings['admin_email']; ?>" required><br>
+            <label>Admin Email:</label>
+            <input type="email" name="admin_email" value="<?php echo htmlspecialchars($settings['admin_email']); ?>" required>
 
-                <label>Borrowing Limit:</label>
-                <input type="number" name="borrowing_limit" value="<?php echo $settings['borrowing_limit']; ?>" required><br>
+            <label>Borrowing Limit:</label>
+            <input type="number" name="borrowing_limit" value="<?php echo htmlspecialchars($settings['borrowing_limit']); ?>" required>
 
-                <label>Enter Admin Password:</label>
-                <input type="password" name="admin_password" required><br>
+            <label>Enter Admin Password:</label>
+            <input type="password" name="admin_password" required>
 
-                <button type="submit">Update Settings</button>
-            </form>
-
-            <?php
-            if ($_SERVER["REQUEST_METHOD"] == "POST") {
-                if (password_verify($admin_password, $user['password'])) {
-                    echo "<p class='success'>Settings updated successfully!</p>";
-                } else {
-                    echo "<p class='error'>Incorrect password. Settings update failed.</p>";
-                }
-            }
-            ?>
-        </div>
-
-        <br>
-        <div class="back-link">
-            <a href="admin_panel.php">Back to Admin Panel</a>
-        </div>
+            <button type="submit" class="submit-btn">Update Settings</button>
+        </form>
     </div>
 </div>
 
 <script>
     function toggleSidebar() {
-        document.getElementById('sidebar').classList.toggle('active');
+        var sidebar = document.getElementById("sidebar");
+        sidebar.style.display = (sidebar.style.display === "block") ? "none" : "block";
     }
 </script>
 

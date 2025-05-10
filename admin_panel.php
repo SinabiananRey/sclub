@@ -41,26 +41,8 @@ while ($row = $monthly_borrow_result->fetch_assoc()) {
         body {
             margin: 0;
             font-family: Arial, sans-serif;
-        }
-
-        .toggle-btn {
-            display: none;
-            position: absolute;
-            top: 15px;
-            left: 15px;
-            background-color: #003366;
-            color: white;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-            z-index: 1000;
-            padding: 8px 12px;
-            border-radius: 5px;
-        }
-
-        .container {
+            background-color: #eef1f5;
             display: flex;
-            height: 100vh;
         }
 
         .sidebar {
@@ -68,7 +50,10 @@ while ($row = $monthly_borrow_result->fetch_assoc()) {
             background: #003366;
             color: white;
             padding: 20px;
-            transition: left 0.3s ease;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
         }
 
         .sidebar h2 {
@@ -88,34 +73,43 @@ while ($row = $monthly_borrow_result->fetch_assoc()) {
             background: #0055aa;
         }
 
-        .main-content {
-            flex-grow: 1;
-            padding: 20px;
-            background: #f4f4f4;
-            overflow-y: auto;
+        .container {
+            margin-left: 270px;
+            padding: 30px;
+            width: 100%;
+        }
+
+        h2 {
+            color: #003366;
+            text-align: center;
         }
 
         .stats {
             display: flex;
             gap: 20px;
             flex-wrap: wrap;
-            margin-bottom: 20px;
+            justify-content: center;
+            margin-top: 20px;
         }
 
         .stat-box {
-            flex: 1;
-            min-width: 200px;
+            flex: 1 1 200px;
             background: white;
             padding: 20px;
             border-radius: 10px;
             text-align: center;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .stat-box h3 {
+            color: #333;
         }
 
         .charts-container {
             display: flex;
             flex-wrap: wrap;
             gap: 20px;
+            margin-top: 40px;
         }
 
         .chart-card {
@@ -123,13 +117,12 @@ while ($row = $monthly_borrow_result->fetch_assoc()) {
             background: white;
             padding: 20px;
             border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            min-width: 300px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
 
         .chart-card h4 {
             text-align: center;
-            margin-bottom: 10px;
+            margin-bottom: 20px;
         }
 
         canvas {
@@ -137,108 +130,94 @@ while ($row = $monthly_borrow_result->fetch_assoc()) {
             width: 100% !important;
         }
 
+        .toggle-btn {
+            display: none;
+        }
+
         @media (max-width: 768px) {
             .container {
-                flex-direction: column;
+                margin-left: 0;
+                padding: 20px;
             }
 
             .sidebar {
-                position: absolute;
-                top: 0;
-                left: -250px;
-                height: 100%;
-                z-index: 999;
-            }
-
-            .sidebar.active {
-                left: 0;
-            }
-
-            .main-content {
-                padding-top: 60px;
+                display: none;
             }
 
             .toggle-btn {
                 display: block;
+                position: fixed;
+                top: 15px;
+                left: 15px;
+                background-color: #003366;
+                color: white;
+                border: none;
+                font-size: 24px;
+                cursor: pointer;
+                z-index: 1000;
+                padding: 8px 12px;
+                border-radius: 5px;
             }
         }
     </style>
 </head>
 <body>
 
-<!-- Toggle button -->
 <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
 
+<div class="sidebar" id="sidebar">
+    <h2><a href="admin_panel.php" style="color:white; text-decoration:none;">Admin Panel</a></h2>
+    <a href="manage_members.php">Manage Members</a>
+    <a href="manage_equipment.php">Manage Equipment</a>
+    <a href="post_announcements.php">Post Announcements</a>
+    <a href="view_reports.php">View Reports</a>
+    <a href="settings.php">System Settings</a>
+    <a href="logout.php">Logout</a>
+</div>
+
 <div class="container">
-    <!-- Sidebar -->
-    <div class="sidebar" id="sidebar">
-        <h2>Admin Panel</h2>
-        <a href="manage_members.php">Manage Members</a>
-        <a href="manage_equipment.php">Manage Equipment</a>
-        <a href="post_announcements.php">Manage Announcements</a>
-        <a href="view_reports.php">View Reports</a>
-        <a href="settings.php">System Settings</a>
-        <a href="logout.php">Logout</a>
+    <h2>Welcome, Admin!</h2>
+
+    <div class="stats">
+        <div class="stat-box">
+            <h3>Total Members</h3>
+            <p><?php echo $member_data['total_members']; ?></p>
+        </div>
+        <div class="stat-box">
+            <h3>Total Equipment</h3>
+            <p><?php echo $equipment_data['total_equipment']; ?></p>
+        </div>
+        <div class="stat-box">
+            <h3>Borrowed Equipment</h3>
+            <p><?php echo $borrow_data['borrowed_count']; ?></p>
+        </div>
     </div>
 
-    <!-- Main Content -->
-    <div class="main-content">
-        <h2>Welcome, Admin!</h2>
-
-        <div class="stats">
-            <div class="stat-box">
-                <h3>Total Members</h3>
-                <p><?php echo $member_data['total_members']; ?></p>
-            </div>
-            <div class="stat-box">
-                <h3>Total Equipment</h3>
-                <p><?php echo $equipment_data['total_equipment']; ?></p>
-            </div>
-            <div class="stat-box">
-                <h3>Borrowed Equipment</h3>
-                <p id="borrowedCount">Loading...</p>
-            </div>
+    <div class="charts-container">
+        <div class="chart-card">
+            <h4>Member Count</h4>
+            <canvas id="membersChart"></canvas>
         </div>
-
-        <h3>Graphical Overview</h3>
-        <div class="charts-container">
-            <div class="chart-card">
-                <h4>Member Count</h4>
-                <canvas id="membersChart"></canvas>
-            </div>
-            <div class="chart-card">
-                <h4>Equipment Count</h4>
-                <canvas id="equipmentChart"></canvas>
-            </div>
-            <div class="chart-card">
-                <h4>Currently Borrowed Equipment</h4>
-                <canvas id="borrowedChart"></canvas>
-            </div>
-            <div class="chart-card">
-                <h4>Monthly Borrowing Trends</h4>
-                <canvas id="monthlyBorrowChart"></canvas>
-            </div>
+        <div class="chart-card">
+            <h4>Equipment Count</h4>
+            <canvas id="equipmentChart"></canvas>
+        </div>
+        <div class="chart-card">
+            <h4>Borrowed Equipment</h4>
+            <canvas id="borrowedChart"></canvas>
+        </div>
+        <div class="chart-card">
+            <h4>Monthly Borrowing Trends</h4>
+            <canvas id="monthlyBorrowChart"></canvas>
         </div>
     </div>
 </div>
 
 <script>
     function toggleSidebar() {
-        const sidebar = document.getElementById('sidebar');
-        sidebar.classList.toggle('active');
+        var sidebar = document.getElementById("sidebar");
+        sidebar.style.display = sidebar.style.display === "block" ? "none" : "block";
     }
-
-    function updateBorrowedItems() {
-        fetch('fetch_borrowed_items.php')
-            .then(response => response.text())
-            .then(data => {
-                document.getElementById('borrowedCount').innerHTML = data;
-            })
-            .catch(error => console.error('Error:', error));
-    }
-
-    updateBorrowedItems();
-    setInterval(updateBorrowedItems, 10000);
 
     new Chart(document.getElementById('membersChart'), {
         type: 'doughnut',
@@ -271,10 +250,6 @@ while ($row = $monthly_borrow_result->fetch_assoc()) {
                 data: [<?php echo $borrow_data['borrowed_count']; ?>],
                 backgroundColor: ['#2196F3']
             }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false
         }
     });
 
@@ -284,16 +259,12 @@ while ($row = $monthly_borrow_result->fetch_assoc()) {
         data: {
             labels: <?php echo json_encode($months); ?>,
             datasets: [{
-                label: 'Monthly Borrowing Trends',
+                label: 'Monthly Borrowing',
                 data: <?php echo json_encode($monthly_counts); ?>,
-                backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                backgroundColor: 'rgba(255, 99, 132, 0.6)',
                 borderColor: 'rgba(255, 99, 132, 1)',
-                borderWidth: 2
+                borderWidth: 1
             }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false
         }
     });
 </script>

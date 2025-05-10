@@ -2,13 +2,11 @@
 session_start();
 include 'db_connect.php';
 
-// ✅ Ensure only admin users can access reports
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') {
     header("Location: login.php");
     exit();
 }
 
-// ✅ Fetch member borrowing details including return status
 $member_query = "SELECT m.full_name, m.email, COUNT(b.transaction_id) AS total_borrowed, 
                  GROUP_CONCAT(CONCAT(e.name, ' (', IF(b.status = 'returned', 'Returned', 'Not Returned'), ')') SEPARATOR ', ') AS borrowed_items
                  FROM members m
@@ -18,58 +16,172 @@ $member_query = "SELECT m.full_name, m.email, COUNT(b.transaction_id) AS total_b
                  ORDER BY total_borrowed DESC";
 $member_result = $conn->query($member_query);
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>View Reports | Admin Panel</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports | Sports Club</title>
     <style>
-        body { font-family: Arial, sans-serif; background: #f9fafb; color: #333; }
-        .container { max-width: 1000px; margin: 40px auto; padding: 20px; background: #fff; border-radius: 8px; }
-        h2 { text-align: center; color: #1e3a8a; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
-        th { background-color: #f3f4f6; }
-        .back-link { text-align: center; margin-top: 20px; }
-        .back-link a { font-size: 16px; color: #1e3a8a; }
-        .back-link a:hover { text-decoration: underline; }
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            background: #eef1f5;
+            display: flex;
+        }
+
+        .sidebar {
+            width: 250px;
+            background: #003366;
+            color: white;
+            padding: 20px;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .sidebar a {
+            display: block;
+            color: white;
+            text-decoration: none;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        .sidebar a:hover {
+            background: #0055aa;
+        }
+
+        .container {
+            margin-left: 270px;
+            padding: 30px;
+            width: 100%;
+        }
+
+        h2 {
+            text-align: center;
+            color: #003366;
+            margin-bottom: 20px;
+        }
+
+        .message {
+            text-align: center;
+            font-weight: 600;
+            padding: 12px 20px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            width: 60%;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            margin-top: 30px;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #ddd;
+            text-align: center;
+        }
+
+        th {
+            background: #003366;
+            color: white;
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+
+        .toggle-btn {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: #003366;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            font-size: 18px;
+            z-index: 1000;
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin-left: 0;
+                padding: 15px;
+            }
+
+            .sidebar {
+                display: none;
+                position: relative;
+                width: 100%;
+                height: auto;
+            }
+
+            .toggle-btn {
+                display: block;
+            }
+        }
     </style>
 </head>
 <body>
 
+<!-- Toggle Button -->
+<button class="toggle-btn" onclick="toggleSidebar()">☰</button>
+
+<!-- Sidebar -->
+<div class="sidebar" id="sidebar">
+    <h2><a href="admin_panel.php" style="color:white; text-decoration:none;">Admin Panel</a></h2>
+    <a href="manage_members.php">Manage Members</a>
+    <a href="manage_equipment.php">Manage Equipment</a>
+    <a href="post_announcements.php">Post Announcements</a>
+    <a href="view_reports.php">View Reports</a>
+    <a href="settings.php">System Settings</a>
+    <a href="logout.php">Logout</a>
+</div>
+
+<!-- Main Content -->
 <div class="container">
     <h2>Member Borrowing Overview</h2>
 
-    <div class="summary-container">
-        <h3>Borrowing Details</h3>
-        <table>
-            <thead>
+    <table>
+        <thead>
+            <tr>
+                <th>Full Name</th>
+                <th>Email</th>
+                <th>Total Items Borrowed</th>
+                <th>Borrowed Equipment (Return Status)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php while ($row = $member_result->fetch_assoc()) { ?>
                 <tr>
-                    <th>Full Name</th>
-                    <th>Email</th>
-                    <th>Total Items Borrowed</th>
-                    <th>Borrowed Equipment (Return Status)</th>
+                    <td><?php echo htmlspecialchars($row['full_name']); ?></td>
+                    <td><?php echo htmlspecialchars($row['email']); ?></td>
+                    <td><?php echo htmlspecialchars($row['total_borrowed']); ?></td>
+                    <td><?php echo $row['borrowed_items'] ? htmlspecialchars($row['borrowed_items']) : 'No items borrowed'; ?></td>
                 </tr>
-            </thead>
-            <tbody>
-                <?php while ($row = $member_result->fetch_assoc()) { ?>
-                    <tr>
-                        <td><?php echo htmlspecialchars($row['full_name']); ?></td>
-                        <td><?php echo htmlspecialchars($row['email']); ?></td>
-                        <td><?php echo htmlspecialchars($row['total_borrowed']); ?></td>
-                        <td><?php echo $row['borrowed_items'] ? htmlspecialchars($row['borrowed_items']) : 'No items borrowed'; ?></td>
-                    </tr>
-                <?php } ?>
-            </tbody>
-        </table>
-    </div>
-
-    <div class="back-link">
-        <a href="admin_panel.php">Back to Admin Panel</a>
-    </div>
+            <?php } ?>
+        </tbody>
+    </table>
 </div>
+
+<script>
+    function toggleSidebar() {
+        var sidebar = document.getElementById("sidebar");
+        sidebar.style.display = (sidebar.style.display === "block") ? "none" : "block";
+    }
+</script>
 
 </body>
 </html>
