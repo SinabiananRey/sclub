@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 10, 2025 at 01:40 PM
+-- Generation Time: May 11, 2025 at 03:53 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -56,7 +56,7 @@ CREATE TABLE `borrow_transactions` (
   `member_id` int(11) NOT NULL,
   `equipment_id` int(11) NOT NULL,
   `borrow_date` timestamp NOT NULL DEFAULT current_timestamp(),
-  `return_date` timestamp NULL DEFAULT NULL,
+  `return_date` datetime DEFAULT NULL,
   `status` enum('borrowed','returned') DEFAULT 'borrowed',
   `returned_date` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -66,11 +66,7 @@ CREATE TABLE `borrow_transactions` (
 --
 
 INSERT INTO `borrow_transactions` (`transaction_id`, `member_id`, `equipment_id`, `borrow_date`, `return_date`, `status`, `returned_date`) VALUES
-(19, 60, 12, '2025-05-08 23:10:31', NULL, 'borrowed', NULL),
-(22, 60, 12, '2025-05-09 11:57:06', '2025-05-11 16:00:00', 'borrowed', NULL),
-(23, 1009, 12, '2025-05-09 12:32:06', '2025-05-08 16:00:00', 'borrowed', NULL),
-(24, 1009, 12, '2025-05-10 04:29:45', '2025-05-09 16:00:00', 'borrowed', NULL),
-(25, 1009, 15, '2025-05-10 04:35:17', '2025-05-09 16:00:00', 'borrowed', NULL);
+(26, 1011, 12, '2025-05-11 13:39:40', '2025-05-11 00:00:00', 'borrowed', NULL);
 
 -- --------------------------------------------------------
 
@@ -91,7 +87,7 @@ CREATE TABLE `equipment` (
 --
 
 INSERT INTO `equipment` (`equipment_id`, `name`, `quantity`, `status`, `stock`) VALUES
-(12, 'basketball', 0, 'available', 6),
+(12, 'basketball', 0, 'available', 5),
 (14, 'frisbee disc', 0, 'available', 12),
 (15, 'volleyball net', 0, 'available', 4);
 
@@ -116,9 +112,7 @@ CREATE TABLE `members` (
 --
 
 INSERT INTO `members` (`member_id`, `user_id`, `full_name`, `email`, `joined_date`, `password`, `role`) VALUES
-(39, 60, 'Gerlie Sinabianan', 'gerlieidoanlicaosinabianan@gmail.com', '2025-05-09', '$2y$10$cLn/M5f2dfQj4X7h2cgbVORmQpwOWxLiOO6tBSLniO.rme1ixujwW', 'member'),
-(47, 1009, 'Rey Sinabianan', '20212010@nbsc.edu.ph', '2025-05-09', '$2y$10$C9UIcfO7TWuP5KmtaIEgMuYh/D.wXFbhIWkTuNmnpy.cSiSV0sy1C', 'member'),
-(48, 1010, 'Meriane Cecel Sinabianan', 'merianesinabianan@gmail.com', '2025-05-10', '$2y$10$p7W2pUkzKFT6Y3AsOkGujexRSJdNFFg2jzX.x9xDVyN5lh/fMi7Mm', 'member');
+(49, 1011, 'Rey Sinabianan', '20212010@nbsc.edu.ph', '2025-05-11', '$2y$10$vbvGnTtYv4Pvk8Eep5RWrefkV68cbC0qfKl2NuR2WiNQm39EhS30W', 'member');
 
 -- --------------------------------------------------------
 
@@ -162,9 +156,7 @@ CREATE TABLE `users` (
 
 INSERT INTO `users` (`user_id`, `username`, `password`, `role`, `email`, `verification_code`, `verified`) VALUES
 (1, 'Taloy', '$2y$10$IYjcpO.SpqLGSSypbrjtCehNFVL/zvt18fWfMW3Ve31JjLpHmwZMm', 'admin', 'sinabiananrey@gmail.com', '', 1),
-(60, 'gerlie', '$2y$10$7amPpjZU..nrXLOnri3mI.ogToocAHBGCJb89jEuu5X35OwMNRLaK', 'member', 'gerlieidoanlicaosinabianan@gmail.com', '', 1),
-(1009, 'Rey', '$2y$10$3yJGJAFEARN2aXuKGMVLCuPT6b8TxmcUU0EPKe.bbbeh5cjH24mXW', 'member', '20212010@nbsc.edu.ph', '', 1),
-(1010, 'user3379', '$2y$10$p7W2pUkzKFT6Y3AsOkGujexRSJdNFFg2jzX.x9xDVyN5lh/fMi7Mm', 'member', 'merianesinabianan@gmail.com', '', 1);
+(1011, 'user4098', '$2y$10$vbvGnTtYv4Pvk8Eep5RWrefkV68cbC0qfKl2NuR2WiNQm39EhS30W', 'member', '20212010@nbsc.edu.ph', '', 1);
 
 --
 -- Indexes for dumped tables
@@ -225,7 +217,7 @@ ALTER TABLE `announcements`
 -- AUTO_INCREMENT for table `borrow_transactions`
 --
 ALTER TABLE `borrow_transactions`
-  MODIFY `transaction_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
+  MODIFY `transaction_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
 
 --
 -- AUTO_INCREMENT for table `equipment`
@@ -237,7 +229,7 @@ ALTER TABLE `equipment`
 -- AUTO_INCREMENT for table `members`
 --
 ALTER TABLE `members`
-  MODIFY `member_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=49;
+  MODIFY `member_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=50;
 
 --
 -- AUTO_INCREMENT for table `settings`
@@ -249,7 +241,7 @@ ALTER TABLE `settings`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1011;
+  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1012;
 
 --
 -- Constraints for dumped tables
