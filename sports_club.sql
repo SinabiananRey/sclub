@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 11, 2025 at 03:53 PM
+-- Generation Time: May 15, 2025 at 01:47 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -41,9 +41,8 @@ CREATE TABLE `announcements` (
 --
 
 INSERT INTO `announcements` (`id`, `admin_id`, `title`, `content`, `date_posted`, `created_at`) VALUES
-(3, 1, 'Try', 'woah', '2025-05-07 15:48:23', '2025-05-07 15:48:23'),
 (4, 1, 'helloi', 'hiiii', '2025-05-08 01:01:16', '2025-05-08 01:01:16'),
-(5, 1, 'hello', 'hi', '2025-05-08 01:16:43', '2025-05-08 01:16:43');
+(10, 1, 'sgdfiguewjgdsugfgdsiy', 'ksgdfisg', '2025-05-14 22:59:25', '2025-05-14 22:59:25');
 
 -- --------------------------------------------------------
 
@@ -66,7 +65,8 @@ CREATE TABLE `borrow_transactions` (
 --
 
 INSERT INTO `borrow_transactions` (`transaction_id`, `member_id`, `equipment_id`, `borrow_date`, `return_date`, `status`, `returned_date`) VALUES
-(26, 1011, 12, '2025-05-11 13:39:40', '2025-05-11 00:00:00', 'borrowed', NULL);
+(26, 1011, 12, '2025-05-11 13:39:40', '2025-05-11 00:00:00', 'returned', '2025-05-14 23:32:22'),
+(27, 1011, 15, '2025-05-14 23:33:20', '2025-05-15 00:00:00', 'borrowed', NULL);
 
 -- --------------------------------------------------------
 
@@ -89,7 +89,8 @@ CREATE TABLE `equipment` (
 INSERT INTO `equipment` (`equipment_id`, `name`, `quantity`, `status`, `stock`) VALUES
 (12, 'basketball', 0, 'available', 5),
 (14, 'frisbee disc', 0, 'available', 12),
-(15, 'volleyball net', 0, 'available', 4);
+(15, 'volleyball net', 0, 'available', 3),
+(17, 'cone', 0, 'available', 12);
 
 -- --------------------------------------------------------
 
@@ -211,19 +212,19 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `announcements`
 --
 ALTER TABLE `announcements`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `borrow_transactions`
 --
 ALTER TABLE `borrow_transactions`
-  MODIFY `transaction_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
+  MODIFY `transaction_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
 
 --
 -- AUTO_INCREMENT for table `equipment`
 --
 ALTER TABLE `equipment`
-  MODIFY `equipment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `equipment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT for table `members`

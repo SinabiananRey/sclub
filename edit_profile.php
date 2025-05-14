@@ -13,7 +13,6 @@ $member_id = $_SESSION['user_id'];
 $update_status_query = "UPDATE borrow_transactions  
                         SET status = 'overdue'  
                         WHERE return_date < NOW() AND (status IS NULL OR status = '')";
-
 $conn->query($update_status_query);
 
 // ✅ Fetch user info
@@ -24,8 +23,8 @@ $stmt->execute();
 $result = $stmt->get_result();
 $user = $result->fetch_assoc();
 
-// ✅ Handle updates
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
+// ✅ Handle profile update
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['username'], $_POST['email'], $_POST['password'], $_POST['confirm_password'])) {
     $username = $_POST['username'];
     $email = $_POST['email'];
     $password = $_POST['password'];
@@ -49,8 +48,24 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 }
 
-// ✅ Borrowing history - Marks overdue items correctly
-$history_query = "SELECT b.borrow_date, b.return_date, b.returned_date, e.name,  
+// ✅ Handle return action
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['return_transaction_id'])) {
+    $return_id = $_POST['return_transaction_id'];
+    $return_query = "UPDATE borrow_transactions SET returned_date = NOW(), status = 'returned' WHERE transaction_id = ?";
+    $stmt = $conn->prepare($return_query);
+    $stmt->bind_param("i", $return_id);
+
+    if ($stmt->execute()) {
+        $_SESSION['confirmation_message'] = "✅ Equipment returned successfully!";
+        header("Location: edit_profile.php");
+        exit();
+    } else {
+        $error = "❌ Error updating return status.";
+    }
+}
+
+// ✅ Borrowing history - include transaction_id for the return button
+$history_query = "SELECT b.transaction_id, b.borrow_date, b.return_date, b.returned_date, e.name,  
                          CASE  
                              WHEN b.status = 'borrowed' AND b.return_date < NOW() THEN 'overdue'  
                              ELSE b.status  
@@ -64,7 +79,7 @@ $stmt->bind_param("i", $member_id);
 $stmt->execute();
 $history_result = $stmt->get_result();
 
-// ✅ Send email notifications for overdue items
+// ✅ Send overdue email notifications
 function sendOverdueNotification($member_email, $equipment_name, $return_date) {
     $subject = "Overdue Equipment Notice";
     $message = "Hello,\n\nYou have overdue equipment: $equipment_name.\nIt was due on $return_date.\nPlease return it as soon as possible.";
@@ -73,7 +88,6 @@ function sendOverdueNotification($member_email, $equipment_name, $return_date) {
     mail($member_email, $subject, $message, $headers);
 }
 
-// ✅ Find overdue items and send email notifications
 $overdue_query = "SELECT u.email, e.name, b.return_date  
                   FROM borrow_transactions b  
                   JOIN users u ON b.member_id = u.user_id  
@@ -144,7 +158,7 @@ while ($row = $result->fetch_assoc()) {
 
     <h2>Borrowing History</h2>
     <table>
-        <tr><th>Equipment</th><th>Status</th><th>Borrowed Date</th><th>Return Date</th><th>Returned Date</th></tr>
+        <tr><th>Equipment</th><th>Status</th><th>Borrowed Date</th><th>Return Date</th><th>Returned Date</th><th>Action</th></tr>
         <?php while ($row = $history_result->fetch_assoc()) { ?>
             <tr>
                 <td><?php echo htmlspecialchars($row['name']); ?></td>
@@ -152,9 +166,18 @@ while ($row = $result->fetch_assoc()) {
                 <td><?php echo htmlspecialchars($row['borrow_date']); ?></td>
                 <td><?php echo htmlspecialchars($row['return_date']); ?></td>
                 <td><?php echo $row['returned_date'] ? htmlspecialchars($row['returned_date']) : 'Not Returned'; ?></td>
+                <td>
+                    <?php if ($row['status'] == 'borrowed' || $row['status'] == 'overdue') { ?>
+                        <form method="POST" style="display:inline;">
+                            <input type="hidden" name="return_transaction_id" value="<?php echo $row['transaction_id']; ?>">
+                            <button type="submit">Mark as Returned</button>
+                        </form>
+                    <?php } else { echo "✔ Returned"; } ?>
+                </td>
             </tr>
         <?php } ?>
     </table>
 </div>
+
 </body>
 </html>
