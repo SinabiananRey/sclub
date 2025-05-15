@@ -7,7 +7,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') {
     exit();
 }
 
-$member_query = "SELECT COUNT(*) AS total_members FROM users WHERE role = 'member'";
+$member_query = "SELECT COUNT(*) AS total_members FROM members WHERE role = 'member'";
 $member_result = $conn->query($member_query);
 $member_data = $member_result->fetch_assoc();
 
