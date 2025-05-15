@@ -2,33 +2,35 @@
 session_start();
 include 'db_connect.php';
 
-// Ensure only admin users can access
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') {
+// Only admin access
+if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
     header("Location: login.php");
     exit();
 }
 
-// Handle equipment deletion safely
-if (isset($_GET['delete_id'])) {
-    $delete_id = $_GET['delete_id'];
+// Handle POST deletion securely
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
+    $delete_id = intval($_POST['delete_id']);
 
-    $delete_borrow_query = "DELETE FROM borrow_transactions WHERE equipment_id = ?";
-    $stmt_borrow = $conn->prepare($delete_borrow_query);
+    // Delete associated borrow records first
+    $stmt_borrow = $conn->prepare("DELETE FROM borrow_transactions WHERE equipment_id = ?");
     $stmt_borrow->bind_param("i", $delete_id);
     $stmt_borrow->execute();
 
-    $delete_equipment_query = "DELETE FROM equipment WHERE equipment_id = ?";
-    $stmt_equipment = $conn->prepare($delete_equipment_query);
+    // Then delete equipment
+    $stmt_equipment = $conn->prepare("DELETE FROM equipment WHERE equipment_id = ?");
     $stmt_equipment->bind_param("i", $delete_id);
     if ($stmt_equipment->execute()) {
-        $_SESSION['confirmation_message'] = "Equipment deleted successfully!";
+        $_SESSION['confirmation_message'] = "✅ Equipment deleted successfully!";
         header("Location: manage_equipment.php");
         exit();
+    } else {
+        $_SESSION['error_message'] = "❌ Failed to delete equipment.";
     }
 }
 
-$equipment_query = "SELECT equipment_id, name, status, stock FROM equipment";
-$equipment_result = $conn->query($equipment_query);
+// Fetch equipment list
+$equipment_result = $conn->query("SELECT equipment_id, name, status, stock FROM equipment");
 ?>
 
 <!DOCTYPE html>
@@ -36,184 +38,68 @@ $equipment_result = $conn->query($equipment_query);
 <head>
     <meta charset="UTF-8">
     <title>Manage Equipment | Sports Club</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        body {
-            margin: 0;
-            font-family: 'Segoe UI', sans-serif;
-            background: #eef1f5;
-            display: flex;
-        }
-
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #eef1f5; }
         .sidebar {
-            width: 250px;
-            background: #003366;
-            color: white;
-            padding: 20px;
-            height: 100vh;
-            position: fixed;
-            top: 0;
-            left: 0;
+            width: 250px; background: #003366; color: white; padding: 20px;
+            height: 100vh; position: fixed; top: 0; left: 0;
         }
-
         .sidebar a {
-            display: block;
-            color: white;
-            text-decoration: none;
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 10px;
+            display: block; color: white; text-decoration: none;
+            padding: 10px; margin-bottom: 10px; border-radius: 5px;
         }
-
-        .sidebar a:hover {
-            background: #0055aa;
-        }
-
+        .sidebar a:hover { background: #0055aa; }
         .container {
-            margin-left: 270px;
-            padding: 30px;
-            width: 100%;
+            margin-left: 270px; padding: 30px;
         }
-
-        h2 {
-            text-align: center;
-            color: #003366;
-            margin-bottom: 20px;
+        h2, h3 { color: #003366; text-align: center; }
+        .message, .error {
+            width: 60%; margin: 20px auto; text-align: center;
+            padding: 12px; border-radius: 6px; font-weight: 600;
         }
-
-        .message {
-            text-align: center;
-            font-weight: 600;
-            padding: 12px 20px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-            width: 60%;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        .message.success {
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
+        .message { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
 
         table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            width: 100%; border-collapse: collapse; background: white;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1); border-radius: 10px; overflow: hidden;
         }
-
         th, td {
-            padding: 12px 15px;
-            border-bottom: 1px solid #ddd;
-            text-align: center;
+            padding: 14px; text-align: center; border-bottom: 1px solid #ddd;
+        }
+        th { background: #003366; color: white; }
+        tr:nth-child(even) { background: #f9f9f9; }
+
+        .btn {
+            padding: 8px 14px; border: none; border-radius: 5px;
+            cursor: pointer; font-weight: 500;
+        }
+        .edit-btn { background: #007bff; color: white; }
+        .edit-btn:hover { background: #0056b3; }
+
+        .delete-btn { background: #dc3545; color: white; }
+        .delete-btn:hover { background: #c82333; }
+
+        .submit-btn {
+            background-color: #003366; color: white; padding: 10px 16px;
+            border: none; border-radius: 5px; width: 50%; margin-top: 10px;
         }
 
-        th {
-            background: #003366;
-            color: white;
-            font-weight: 600;
-        }
+        .submit-btn:hover { background-color: #0055aa; }
 
-        tr:nth-child(even) {
-            background: #f9f9f9;
-        }
+        form.delete-form { display: inline; }
 
-        .delete-btn {
-            background: #dc3545;
-            color: white;
-            border: none;
-            padding: 8px 14px;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-
-        .delete-btn:hover {
-            background: #c82333;
+        @media (max-width: 768px) {
+            .container { margin-left: 0; padding: 15px; }
+            .sidebar { display: none; position: relative; width: 100%; height: auto; }
+            .toggle-btn { display: block; }
         }
 
         .toggle-btn {
-            position: fixed;
-            top: 10px;
-            left: 10px;
-            background: #003366;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            font-size: 18px;
-            z-index: 1000;
-            display: none;
-        }
-
-        .form-wrapper {
-            max-width: 700px;
-            margin: 40px auto;
-        }
-
-        .form-wrapper table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-        }
-
-        .form-wrapper th, .form-wrapper td {
-            padding: 14px 16px;
-            border-bottom: 1px solid #ddd;
-            text-align: left;
-        }
-
-        .form-wrapper th {
-            background: #003366;
-            color: white;
-        }
-
-        .form-wrapper input, .form-wrapper select {
-            width: 100%;
-            padding: 8px;
-            font-size: 15px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-
-        .submit-btn {
-            background-color:  #003366;
-            color: white;
-            padding: 10px 16px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 15px;
-            width: 50%;
-            transition: background 0.3s;
-        }
-
-        .submit-btn:hover {
-            background-color: #218838;
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                margin-left: 0;
-                padding: 15px;
-            }
-
-            .sidebar {
-                display: none;
-                position: relative;
-                width: 100%;
-                height: auto;
-            }
-
-            .toggle-btn {
-                display: block;
-            }
+            position: fixed; top: 10px; left: 10px;
+            background: #003366; color: white; padding: 10px 15px;
+            border: none; font-size: 18px; z-index: 1000; display: none;
         }
     </style>
 </head>
@@ -221,7 +107,7 @@ $equipment_result = $conn->query($equipment_query);
 
 <!-- Sidebar -->
 <div class="sidebar" id="sidebar">
-    <h2><a href="admin_panel.php" style="color:white; text-decoration:none;">Admin Panel</a></h2>
+    <h2><a href="admin_panel.php" style="color:white;">Admin Panel</a></h2>
     <a href="manage_members.php">Manage Members</a>
     <a href="manage_equipment.php">Manage Equipment</a>
     <a href="post_announcements.php">Post Announcements</a>
@@ -230,15 +116,19 @@ $equipment_result = $conn->query($equipment_query);
     <a href="logout.php">Logout</a>
 </div>
 
-<!-- Toggle button for small screens -->
+<!-- Toggle button -->
 <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
 
 <!-- Main Content -->
 <div class="container">
     <h2>Manage Equipment</h2>
 
-    <?php if (isset($_SESSION['confirmation_message'])): ?>
-        <div class="message success"><?php echo $_SESSION['confirmation_message']; unset($_SESSION['confirmation_message']); ?></div>
+    <?php if (!empty($_SESSION['confirmation_message'])): ?>
+        <div class="message"><?php echo $_SESSION['confirmation_message']; unset($_SESSION['confirmation_message']); ?></div>
+    <?php endif; ?>
+
+    <?php if (!empty($_SESSION['error_message'])): ?>
+        <div class="error"><?php echo $_SESSION['error_message']; unset($_SESSION['error_message']); ?></div>
     <?php endif; ?>
 
     <table>
@@ -252,20 +142,21 @@ $equipment_result = $conn->query($equipment_query);
         <?php while ($row = $equipment_result->fetch_assoc()) { ?>
             <tr>
                 <td><?php echo $row['equipment_id']; ?></td>
-                <td><?php echo $row['name']; ?></td>
-                <td><?php echo $row['status']; ?></td>
+                <td><?php echo htmlspecialchars($row['name']); ?></td>
+                <td><?php echo htmlspecialchars($row['status']); ?></td>
                 <td><?php echo $row['stock']; ?></td>
                 <td>
-                    <a href="edit_equipment.php?id=<?php echo $row['equipment_id']; ?>">Edit</a> |
-                    <a href="manage_equipment.php?delete_id=<?php echo $row['equipment_id']; ?>" onclick="return confirm('Are you sure?')">
-                        <button class="delete-btn">Delete</button>
-                    </a>
+                    <a class="btn edit-btn" href="edit_equipment.php?id=<?php echo $row['equipment_id']; ?>">Edit</a>
+                    <form method="POST" action="manage_equipment.php" class="delete-form" onsubmit="return confirm('Are you sure you want to delete this equipment?');">
+                        <input type="hidden" name="delete_id" value="<?php echo $row['equipment_id']; ?>">
+                        <button class="btn delete-btn" type="submit">Delete</button>
+                    </form>
                 </td>
             </tr>
         <?php } ?>
     </table>
 
-    <h3 style="text-align:center; margin-top:40px; color:#003366;">Add New Equipment</h3>
+    <h3>Add New Equipment</h3>
     <div class="form-wrapper">
         <form method="POST" action="add_equipment.php">
             <table>
@@ -279,12 +170,12 @@ $equipment_result = $conn->query($equipment_query);
                 </tr>
                 <tr>
                     <td>Stock:</td>
-                    <td><input type="number" name="stock" required></td>
+                    <td><input type="number" name="stock" min="1" required></td>
                 </tr>
                 <tr>
                     <td>Status:</td>
                     <td>
-                        <select name="status">
+                        <select name="status" required>
                             <option value="Available">Available</option>
                             <option value="Borrowed">Borrowed</option>
                             <option value="Maintenance">Under Maintenance</option>
@@ -303,7 +194,7 @@ $equipment_result = $conn->query($equipment_query);
 
 <script>
     function toggleSidebar() {
-        var sidebar = document.getElementById("sidebar");
+        const sidebar = document.getElementById("sidebar");
         sidebar.style.display = (sidebar.style.display === "block") ? "none" : "block";
     }
 </script>
