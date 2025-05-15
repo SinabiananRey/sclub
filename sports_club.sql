@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 15, 2025 at 01:47 AM
+-- Generation Time: May 16, 2025 at 01:07 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -33,16 +33,17 @@ CREATE TABLE `announcements` (
   `title` varchar(255) NOT NULL,
   `content` text NOT NULL,
   `date_posted` timestamp NOT NULL DEFAULT current_timestamp(),
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `image_path` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `announcements`
 --
 
-INSERT INTO `announcements` (`id`, `admin_id`, `title`, `content`, `date_posted`, `created_at`) VALUES
-(4, 1, 'helloi', 'hiiii', '2025-05-08 01:01:16', '2025-05-08 01:01:16'),
-(10, 1, 'sgdfiguewjgdsugfgdsiy', 'ksgdfisg', '2025-05-14 22:59:25', '2025-05-14 22:59:25');
+INSERT INTO `announcements` (`id`, `admin_id`, `title`, `content`, `date_posted`, `created_at`, `image_path`) VALUES
+(16, 1, '📣 Volleyball Tryouts Announcement 🏐', 'Are you ready to showcase your skills on the court? Join us for the upcoming Volleyball Team Tryouts!\r\n\r\n📅 Date:Girls team: jUNE 1-3\r\nboys team: JuNE 4-6\r\n🕘 Time: 10AM\r\n📍 Venue: NBSC COVERED COURT\r\n\r\nWe’re looking for passionate, dedicated, and talented players to be part of our official volleyball team. Whether you’re a seasoned player or a rising star, this is your chance to shine!\r\n\r\n✅ What to Bring:\r\n\r\nProper sports attire\r\n\r\nWater bottle\r\n\r\nExtra shirt/towel\r\n\r\nYour A-game!\r\n\r\n📌 Open to all year level\r\n\r\nDon’t miss this opportunity to be part of something great. Let’s serve, set, and spike our way to victory! 💪\r\n\r\nFor inquiries, contact: Loren Dacol | 09195730637', '2025-05-15 22:28:24', '2025-05-15 22:28:24', 'uploads/Yellow and Blue Modern Illustrative Volleyball Sport Tryout Poster.png'),
+(17, 1, '🌟 Frisbee Team Tryouts Announcement 🥏', 'Think you’ve got what it takes to join the ultimate team?\r\nFrisbee Tryouts are here!\r\n\r\n📅 Date: MAY 23-24\r\n🕘 Time: ANYTIME\r\n📍 Location: Field\r\n\r\nWe’re calling all agile, strategic, and team-driven individuals to try out for our Ultimate Frisbee Team. No experience? No problem! All skill levels are welcome—just bring your energy and team spirit.\r\n\r\n🧢 What to Bring:\r\n\r\nSportswear and rubber shoes\r\n\r\nWater bottle\r\n\r\nTowel\r\n\r\nA positive attitude and willingness to learn\r\n\r\n📌 Open to all \r\n\r\nLet’s chase discs, dive for catches, and build a team that flies high! 💥\r\nSee you on the field!\r\n\r\nFor more info, contact: JOASH RAUTRAUT | 095511555151', '2025-05-15 22:40:14', '2025-05-15 22:40:14', 'uploads/Soccer Field Open Tryouts Flyer.jpg');
 
 -- --------------------------------------------------------
 
@@ -66,7 +67,14 @@ CREATE TABLE `borrow_transactions` (
 
 INSERT INTO `borrow_transactions` (`transaction_id`, `member_id`, `equipment_id`, `borrow_date`, `return_date`, `status`, `returned_date`) VALUES
 (26, 1011, 12, '2025-05-11 13:39:40', '2025-05-11 00:00:00', 'returned', '2025-05-14 23:32:22'),
-(27, 1011, 15, '2025-05-14 23:33:20', '2025-05-15 00:00:00', 'borrowed', NULL);
+(27, 1011, 15, '2025-05-14 23:33:20', '2025-05-15 00:00:00', 'returned', '2025-05-15 11:58:01'),
+(28, 1012, 15, '2025-05-15 11:38:02', '2025-05-16 00:00:00', 'returned', '2025-05-15 11:38:29'),
+(30, 1011, 14, '2025-05-15 12:08:04', '2025-05-15 00:00:00', 'returned', '2025-05-15 12:08:10'),
+(32, 1011, 12, '2025-05-15 12:19:53', '2025-05-15 00:00:00', 'returned', '2025-05-15 12:37:09'),
+(33, 1011, 14, '2025-05-15 12:34:25', '2025-05-15 00:00:00', 'returned', '2025-05-15 12:37:07'),
+(34, 1011, 14, '2025-05-15 12:37:33', '2025-05-15 00:00:00', 'returned', '2025-05-15 12:49:22'),
+(35, 1011, 12, '2025-05-15 13:49:51', '2025-05-15 00:00:00', 'returned', '2025-05-15 13:55:01'),
+(36, 1011, 12, '2025-05-15 22:17:43', '2025-05-16 00:00:00', 'borrowed', NULL);
 
 -- --------------------------------------------------------
 
@@ -87,10 +95,10 @@ CREATE TABLE `equipment` (
 --
 
 INSERT INTO `equipment` (`equipment_id`, `name`, `quantity`, `status`, `stock`) VALUES
-(12, 'basketball', 0, 'available', 5),
-(14, 'frisbee disc', 0, 'available', 12),
-(15, 'volleyball net', 0, 'available', 3),
-(17, 'cone', 0, 'available', 12);
+(12, 'basketball', 0, 'available', 2),
+(14, 'frisbee disc', 0, 'available', 9),
+(15, 'volleyball net', 0, 'available', 2),
+(18, 'Badminton', 0, 'available', 10);
 
 -- --------------------------------------------------------
 
@@ -113,7 +121,8 @@ CREATE TABLE `members` (
 --
 
 INSERT INTO `members` (`member_id`, `user_id`, `full_name`, `email`, `joined_date`, `password`, `role`) VALUES
-(49, 1011, 'Rey Sinabianan', '20212010@nbsc.edu.ph', '2025-05-11', '$2y$10$vbvGnTtYv4Pvk8Eep5RWrefkV68cbC0qfKl2NuR2WiNQm39EhS30W', 'member');
+(49, 1011, 'Rey Sinabianan', '20212010@nbsc.edu.ph', '2025-05-11', '$2y$10$vbvGnTtYv4Pvk8Eep5RWrefkV68cbC0qfKl2NuR2WiNQm39EhS30W', 'member'),
+(50, 1012, 'Mary Ann Sarol', '20231791@nbsc.edu.ph', '2025-05-15', '$2y$10$TRam.EeB7w.UFF6ZSHGNjuB9mR.6LD6zGtvmhzTw1QZ6TPTkLSnra', 'member');
 
 -- --------------------------------------------------------
 
@@ -157,7 +166,8 @@ CREATE TABLE `users` (
 
 INSERT INTO `users` (`user_id`, `username`, `password`, `role`, `email`, `verification_code`, `verified`) VALUES
 (1, 'Taloy', '$2y$10$IYjcpO.SpqLGSSypbrjtCehNFVL/zvt18fWfMW3Ve31JjLpHmwZMm', 'admin', 'sinabiananrey@gmail.com', '', 1),
-(1011, 'user4098', '$2y$10$vbvGnTtYv4Pvk8Eep5RWrefkV68cbC0qfKl2NuR2WiNQm39EhS30W', 'member', '20212010@nbsc.edu.ph', '', 1);
+(1011, 'user4098', '$2y$10$vbvGnTtYv4Pvk8Eep5RWrefkV68cbC0qfKl2NuR2WiNQm39EhS30W', 'member', '20212010@nbsc.edu.ph', '', 1),
+(1012, 'user8873', '$2y$10$TRam.EeB7w.UFF6ZSHGNjuB9mR.6LD6zGtvmhzTw1QZ6TPTkLSnra', 'member', '20231791@nbsc.edu.ph', '', 1);
 
 --
 -- Indexes for dumped tables
@@ -212,25 +222,25 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `announcements`
 --
 ALTER TABLE `announcements`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT for table `borrow_transactions`
 --
 ALTER TABLE `borrow_transactions`
-  MODIFY `transaction_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
+  MODIFY `transaction_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=37;
 
 --
 -- AUTO_INCREMENT for table `equipment`
 --
 ALTER TABLE `equipment`
-  MODIFY `equipment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `equipment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- AUTO_INCREMENT for table `members`
 --
 ALTER TABLE `members`
-  MODIFY `member_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=50;
+  MODIFY `member_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=53;
 
 --
 -- AUTO_INCREMENT for table `settings`
@@ -242,7 +252,7 @@ ALTER TABLE `settings`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1012;
+  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1015;
 
 --
 -- Constraints for dumped tables
