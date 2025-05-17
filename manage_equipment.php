@@ -17,6 +17,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
     $stmt_borrow->bind_param("i", $delete_id);
     $stmt_borrow->execute();
 
+    // Optionally delete image file
+    $stmt_img = $conn->prepare("SELECT image_path FROM equipment WHERE equipment_id = ?");
+    $stmt_img->bind_param("i", $delete_id);
+    $stmt_img->execute();
+    $img_result = $stmt_img->get_result();
+    if ($img_row = $img_result->fetch_assoc()) {
+        if (!empty($img_row['image_path']) && file_exists($img_row['image_path'])) {
+            unlink($img_row['image_path']);
+        }
+    }
+
     // Then delete equipment
     $stmt_equipment = $conn->prepare("DELETE FROM equipment WHERE equipment_id = ?");
     $stmt_equipment->bind_param("i", $delete_id);
@@ -29,8 +40,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
     }
 }
 
+// Handle new equipment add
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_equipment'])) {
+    $name = $_POST['name'];
+    $stock = intval($_POST['stock']);
+    $status = $_POST['status'];
+    $target_dir = "uploads/";
+    $image_path = "";
+
+    if (!empty($_FILES['equipment_image']['name'])) {
+        $image_name = basename($_FILES['equipment_image']['name']);
+        $target_file = $target_dir . time() . "_" . $image_name;
+
+        $file_type = strtolower(pathinfo($target_file, PATHINFO_EXTENSION));
+        if (in_array($file_type, ['jpg', 'jpeg', 'png'])) {
+            if (!is_dir($target_dir)) {
+                mkdir($target_dir, 0755, true);
+            }
+            if (move_uploaded_file($_FILES['equipment_image']['tmp_name'], $target_file)) {
+                $image_path = $target_file;
+            }
+        }
+    }
+
+    $stmt = $conn->prepare("INSERT INTO equipment (name, status, stock, image_path) VALUES (?, ?, ?, ?)");
+    $stmt->bind_param("ssis", $name, $status, $stock, $image_path);
+    if ($stmt->execute()) {
+        $_SESSION['confirmation_message'] = "✅ Equipment added successfully.";
+    } else {
+        $_SESSION['error_message'] = "❌ Failed to add equipment.";
+    }
+    header("Location: manage_equipment.php");
+    exit();
+}
+
 // Fetch equipment list
-$equipment_result = $conn->query("SELECT equipment_id, name, status, stock FROM equipment");
+$equipment_result = $conn->query("SELECT equipment_id, name, status, stock, image_path FROM equipment");
 ?>
 
 <!DOCTYPE html>
@@ -70,6 +115,12 @@ $equipment_result = $conn->query("SELECT equipment_id, name, status, stock FROM 
         }
         th { background: #003366; color: white; }
         tr:nth-child(even) { background: #f9f9f9; }
+
+        img {
+            max-width: 100px;
+            height: auto;
+            border-radius: 8px;
+        }
 
         .btn {
             padding: 8px 14px; border: none; border-radius: 5px;
@@ -133,6 +184,7 @@ $equipment_result = $conn->query("SELECT equipment_id, name, status, stock FROM 
 
     <table>
         <tr>
+            <th>Image</th>
             <th>ID</th>
             <th>Name</th>
             <th>Status</th>
@@ -141,6 +193,13 @@ $equipment_result = $conn->query("SELECT equipment_id, name, status, stock FROM 
         </tr>
         <?php while ($row = $equipment_result->fetch_assoc()) { ?>
             <tr>
+                <td>
+                    <?php if (!empty($row['image_path'])): ?>
+                        <img src="<?php echo htmlspecialchars($row['image_path']); ?>" alt="Equipment Image">
+                    <?php else: ?>
+                        <span>No image</span>
+                    <?php endif; ?>
+                </td>
                 <td><?php echo $row['equipment_id']; ?></td>
                 <td><?php echo htmlspecialchars($row['name']); ?></td>
                 <td><?php echo htmlspecialchars($row['status']); ?></td>
@@ -158,20 +217,10 @@ $equipment_result = $conn->query("SELECT equipment_id, name, status, stock FROM 
 
     <h3>Add New Equipment</h3>
     <div class="form-wrapper">
-        <form method="POST" action="add_equipment.php">
+        <form method="POST" action="manage_equipment.php" enctype="multipart/form-data">
             <table>
-                <tr>
-                    <th>Field</th>
-                    <th>Input</th>
-                </tr>
-                <tr>
-                    <td>Name:</td>
-                    <td><input type="text" name="name" required></td>
-                </tr>
-                <tr>
-                    <td>Stock:</td>
-                    <td><input type="number" name="stock" min="1" required></td>
-                </tr>
+                <tr><td>Name:</td><td><input type="text" name="name" required></td></tr>
+                <tr><td>Stock:</td><td><input type="number" name="stock" min="1" required></td></tr>
                 <tr>
                     <td>Status:</td>
                     <td>
@@ -183,8 +232,12 @@ $equipment_result = $conn->query("SELECT equipment_id, name, status, stock FROM 
                     </td>
                 </tr>
                 <tr>
+                    <td>Upload Image:</td>
+                    <td><input type="file" name="equipment_image" accept="image/*"></td>
+                </tr>
+                <tr>
                     <td colspan="2" style="text-align:center;">
-                        <button type="submit" class="submit-btn">Add Equipment</button>
+                        <button type="submit" name="add_equipment" class="submit-btn">Add Equipment</button>
                     </td>
                 </tr>
             </table>

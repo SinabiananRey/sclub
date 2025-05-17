@@ -14,8 +14,8 @@ $settings_result = $conn->query($settings_query);
 $settings = $settings_result->fetch_assoc();
 $borrow_limit = $settings['borrowing_limit'];
 
-// ✅ Fetch available equipment
-$equipment_query = "SELECT equipment_id, name, status, stock FROM equipment WHERE stock > 0";
+// ✅ Fetch available equipment (include image_path)
+$equipment_query = "SELECT equipment_id, name, status, stock, image_path FROM equipment WHERE stock > 0";
 $equipment_result = $conn->query($equipment_query);
 
 // ✅ Count borrowed items
@@ -54,7 +54,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['borrow_id'], $_POST['r
             $log_stmt->execute();
 
             $_SESSION['confirmation_message'] = "✅ Borrow successful! Return by $return_date.";
-            header("Location: view_equipment.php"); // ✅ Refresh page after borrowing
+            header("Location: view_equipment.php");
             exit();
         } else {
             $_SESSION['confirmation_message'] = "❌ Item is out of stock or borrowing limit reached.";
@@ -71,33 +71,141 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['borrow_id'], $_POST['r
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <style>
-        body { margin: 0; font-family: 'Inter', sans-serif; background-color: #f9fafb; color: #333; }
-        header { background-color: #1e3a8a; color: #fff; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
-        nav a { color: #fff; text-decoration: none; margin-left: 1rem; font-weight: 500; }
-        nav a:hover { text-decoration: underline; }
-        .container { max-width: 1000px; margin: 40px auto; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); }
-        h2 { text-align: center; color: #1e3a8a; margin-bottom: 10px; }
-        p { text-align: center; font-weight: 500; margin-bottom: 30px; }
-        .message { background-color: #e0f2fe; color: #0369a1; padding: 14px; border-radius: 6px; text-align: center; font-weight: 500; margin-bottom: 20px; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { text-align: left; padding: 14px; border-bottom: 1px solid #e5e7eb; }
-        th { background-color: #f1f5f9; color: #111827; }
-        form { display: flex; align-items: center; gap: 10px; }
-        input[type="date"] { padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-family: inherit; }
-        button { background-color: #3b82f6; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; font-weight: 500; transition: background 0.2s ease; }
-        button:hover:not(:disabled) { background-color: #2563eb; }
-        button:disabled { background-color: #9ca3af; cursor: not-allowed; }
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: #f9fafb;
+            color: #333;
+        }
+
+        header {
+            background-color: #1e3a8a;
+            color: #fff;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        nav a {
+            color: #fff;
+            text-decoration: none;
+            margin-left: 1rem;
+            font-weight: 500;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        h2 {
+            text-align: center;
+            color: #1e3a8a;
+            margin-bottom: 10px;
+        }
+
+        p {
+            text-align: center;
+            font-weight: 500;
+            margin-bottom: 30px;
+        }
+
+        .message {
+            background-color: #e0f2fe;
+            color: #0369a1;
+            padding: 14px;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: 500;
+            margin-bottom: 20px;
+        }
+
+        .equipment-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 20px;
+        }
+
+        .equipment-card {
+            background: #f1f5f9;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .equipment-card img {
+            width: 100%;
+            max-height: 180px;
+            object-fit: cover;
+            border-radius: 10px;
+            margin-bottom: 12px;
+        }
+
+        .equipment-card h3 {
+            color: #1e3a8a;
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+
+        .equipment-card p {
+            margin: 8px 0;
+        }
+
+        .equipment-card form {
+            margin-top: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        input[type="date"] {
+            padding: 6px 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            font-family: inherit;
+        }
+
+        button {
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.2s ease;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: #2563eb;
+        }
+
+        button:disabled {
+            background-color: #9ca3af;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
 
 <header>
-    <div><strong>Sports Club</strong></div>
+    <div><strong>🏋️ Sports Club</strong></div>
     <nav>
         <a href="member_dashboard.php">Home</a>
         <a href="view_equipment.php">Equipment</a>
         <a href="edit_profile.php">Settings</a>
-        <a href="logout.php">Logout</a>
     </nav>
 </header>
 
@@ -109,28 +217,28 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['borrow_id'], $_POST['r
         <div class="message"><?php echo $_SESSION['confirmation_message']; unset($_SESSION['confirmation_message']); ?></div>
     <?php endif; ?>
 
-    <table>
-        <thead>
-            <tr><th>ID</th><th>Name</th><th>Status</th><th>Stock</th><th>Borrow</th></tr>
-        </thead>
-        <tbody>
+    <div class="equipment-grid">
         <?php while ($row = $equipment_result->fetch_assoc()) { ?>
-            <tr>
-                <td><?php echo htmlspecialchars($row['equipment_id']); ?></td>
-                <td><?php echo htmlspecialchars($row['name']); ?></td>
-                <td><?php echo htmlspecialchars($row['status']); ?></td>
-                <td><?php echo htmlspecialchars($row['stock']); ?></td>
-                <td>
-                    <form method="POST">
-                        <input type="hidden" name="borrow_id" value="<?php echo $row['equipment_id']; ?>">
-                        <input type="date" name="return_date" required min="<?= date('Y-m-d'); ?>" max="<?= date('Y-m-d', strtotime('+3 days')); ?>">
-                        <button type="submit" <?= ($borrowed_items >= $borrow_limit || $row['stock'] <= 0) ? 'disabled' : ''; ?>>Borrow</button>
-                    </form>
-                </td>
-            </tr>
+            <div class="equipment-card">
+                <?php if (!empty($row['image_path'])): ?>
+                    <img src="<?php echo htmlspecialchars($row['image_path']); ?>" alt="Equipment Image">
+                <?php endif; ?>
+                <h3><?php echo htmlspecialchars($row['name']); ?></h3>
+                <p><strong>Status:</strong> <?php echo htmlspecialchars($row['status']); ?></p>
+                <p><strong>Stock:</strong> <?php echo htmlspecialchars($row['stock']); ?></p>
+                <form method="POST">
+                    <input type="hidden" name="borrow_id" value="<?php echo $row['equipment_id']; ?>">
+                    <input type="date" name="return_date" required 
+                        min="<?= date('Y-m-d'); ?>" 
+                        max="<?= date('Y-m-d', strtotime('+3 days')); ?>">
+                    <button type="submit" 
+                        <?= ($borrowed_items >= $borrow_limit || $row['stock'] <= 0) ? 'disabled' : ''; ?>>
+                        Borrow
+                    </button>
+                </form>
+            </div>
         <?php } ?>
-        </tbody>
-    </table>
+    </div>
 </div>
 
 </body>

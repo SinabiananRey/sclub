@@ -9,16 +9,19 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'member') {
 
 $member_id = $_SESSION['user_id'];
 
-// ✅ Auto-update overdue status for this member only
+// ✅ Fix: Only update to 'overdue' if not returned
 $update_status_query = "UPDATE borrow_transactions  
                         SET status = 'overdue'  
-                        WHERE member_id = ? AND return_date < NOW() AND (status IS NULL OR status = '')";
+                        WHERE member_id = ? 
+                          AND return_date < NOW() 
+                          AND (status IS NULL OR status = '' OR status = 'borrowed') 
+                          AND returned_date IS NULL";
 $stmt = $conn->prepare($update_status_query);
 $stmt->bind_param("i", $member_id);
 $stmt->execute();
 
 // ✅ Fetch user info
-$query = "SELECT username, email FROM users WHERE user_id = ?";
+$query = "SELECT username, email, profile_image FROM users WHERE user_id = ?";
 $stmt = $conn->prepare($query);
 $stmt->bind_param("i", $member_id);
 $stmt->execute();
@@ -31,6 +34,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['username'], $_POST['em
     $email = trim($_POST['email']);
     $password = $_POST['password'] ?? '';
     $confirm_password = $_POST['confirm_password'] ?? '';
+    $target_dir = "uploads/";
+    $image_path = $user['profile_image'];
+
+    if (!empty($_FILES['profile_image']['name'])) {
+        $image_name = basename($_FILES['profile_image']['name']);
+        $target_file = $target_dir . $image_name;
+        $file_type = strtolower(pathinfo($target_file, PATHINFO_EXTENSION));
+        if (in_array($file_type, ['jpg', 'jpeg', 'png'])) {
+            if (move_uploaded_file($_FILES['profile_image']['tmp_name'], $target_file)) {
+                $image_path = $target_file;
+            }
+        }
+    }
 
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error = "Invalid email format.";
@@ -39,13 +55,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['username'], $_POST['em
     } else {
         if (!empty($password)) {
             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-            $update_query = "UPDATE users SET username = ?, email = ?, password = ? WHERE user_id = ?";
+            $update_query = "UPDATE users SET username = ?, email = ?, password = ?, profile_image = ? WHERE user_id = ?";
             $stmt = $conn->prepare($update_query);
-            $stmt->bind_param("sssi", $username, $email, $hashed_password, $member_id);
+            $stmt->bind_param("ssssi", $username, $email, $hashed_password, $image_path, $member_id);
         } else {
-            $update_query = "UPDATE users SET username = ?, email = ? WHERE user_id = ?";
+            $update_query = "UPDATE users SET username = ?, email = ?, profile_image = ? WHERE user_id = ?";
             $stmt = $conn->prepare($update_query);
-            $stmt->bind_param("ssi", $username, $email, $member_id);
+            $stmt->bind_param("sssi", $username, $email, $image_path, $member_id);
         }
 
         if ($stmt->execute()) {
@@ -58,15 +74,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['username'], $_POST['em
     }
 }
 
-// ✅ Borrowing history
-$history_query = "SELECT b.transaction_id, b.borrow_date, b.return_date, b.returned_date, e.name,  
-                         CASE  
-                             WHEN b.status = 'borrowed' AND b.return_date < NOW() THEN 'overdue'  
-                             ELSE b.status  
-                         END AS status  
-                  FROM borrow_transactions b  
-                  JOIN equipment e ON b.equipment_id = e.equipment_id  
-                  WHERE b.member_id = ? ORDER BY b.borrow_date DESC";
+// ✅ Fetch borrowing history
+$history_query = "SELECT b.transaction_id, b.borrow_date, b.return_date, b.returned_date, e.name, b.status
+                  FROM borrow_transactions b
+                  JOIN equipment e ON b.equipment_id = e.equipment_id
+                  WHERE b.member_id = ?
+                  ORDER BY b.borrow_date DESC";
 $stmt = $conn->prepare($history_query);
 $stmt->bind_param("i", $member_id);
 $stmt->execute();
@@ -81,52 +94,147 @@ $history_result = $stmt->get_result();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; background: #f9fafb; margin: 0; padding: 0; color: #333; }
-        header { background: #1e3a8a; color: #fff; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
-        nav a { color: #fff; margin-left: 1rem; text-decoration: none; font-weight: 500; }
-        nav a:hover { text-decoration: underline; }
-        .container { max-width: 800px; margin: 40px auto; padding: 20px; background: #fff; border-radius: 8px; }
-        h2 { color: #1e3a8a; text-align: center; margin-bottom: 25px; }
-        label { display: block; margin-top: 15px; font-weight: 600; }
-        input[type="text"], input[type="email"], input[type="password"] {
-            width: 100%; padding: 10px; margin-top: 6px;
-            border: 1px solid #ccc; border-radius: 4px;
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f1f5f9;
+            color: #333;
+            line-height: 1.6;
+        }
+        header {
+            background:  #1e3a8a;
+            color: #fff;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        nav a {
+            color: #cbd5e1;
+            margin-left: 1rem;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+        nav a:hover {
+            color: #fff;
+        }
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 30px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        }
+        h2 {
+            text-align: center;
+            color: #0f172a;
+            margin-bottom: 25px;
+        }
+        label {
+            display: block;
+            margin-top: 15px;
+            font-weight: 600;
+            color: #334155;
+        }
+        input[type="text"],
+        input[type="email"],
+        input[type="password"],
+        input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            margin-top: 8px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            background: #f8fafc;
         }
         button {
-            margin-top: 20px; padding: 10px 16px;
-            background-color: #3b82f6; color: white;
-            border: none; border-radius: 4px; cursor: pointer; font-weight: 500;
+            margin-top: 25px;
+            padding: 12px 20px;
+            background-color: #3b82f6;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.3s;
         }
-        button:hover { background-color: #2563eb; }
+        button:hover {
+            background-color: #2563eb;
+        }
+        .toggle-btn {
+            background-color: #0ea5e9;
+        }
+        .toggle-btn:hover {
+            background-color: #0284c7;
+        }
+        .logout-btn {
+            background-color: #ef4444;
+        }
+        .logout-btn:hover {
+            background-color: #dc2626;
+        }
         .message {
-            background-color: #e0f2fe; color: #0369a1;
-            padding: 12px; border-radius: 6px; margin-top: 20px;
-            text-align: center; font-weight: 500;
+            background-color: #dbeafe;
+            color: #1e3a8a;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            margin-top: 20px;
+            font-weight: 500;
         }
-        .error { color: red; font-weight: 500; margin-top: 10px; text-align: center; }
-        table { width: 100%; border-collapse: collapse; margin-top: 30px; }
+        .error {
+            color: #dc2626;
+            text-align: center;
+            font-weight: 600;
+            margin-top: 20px;
+        }
+        .profile {
+            display: block;
+            margin: 20px auto;
+            max-width: 130px;
+            border-radius: 50%;
+            border: 4px solid #e2e8f0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 25px;
+        }
         th, td {
-            padding: 12px; text-align: center; border-bottom: 1px solid #ddd;
+            padding: 12px;
+            border-bottom: 1px solid #e2e8f0;
+            text-align: center;
         }
-        th { background-color: #f3f4f6; }
+        th {
+            background: #f8fafc;
+        }
         .badge {
-            padding: 5px 10px; border-radius: 20px;
-            font-size: 0.85em; font-weight: 600;
+            padding: 6px 12px;
+            border-radius: 9999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: inline-block;
         }
-        .borrowed { background: #facc15; color: #000; }
-        .returned { background: #22c55e; color: white; }
-        .overdue { background: #ef4444; color: white; }
+        .borrowed { background: #fde68a; color: #78350f; }
+        .returned { background: #86efac; color: #064e3b; }
+        .overdue { background: #fca5a5; color: #7f1d1d; }
+
+        @media (max-width: 600px) {
+            .container { padding: 20px; }
+            table { font-size: 0.9rem; }
+        }
     </style>
 </head>
 <body>
 
 <header>
-    <div><strong>Sports Club</strong></div>
+    <div><strong>🏋️ Sports Club</strong></div>
     <nav>
         <a href="member_dashboard.php">Home</a>
         <a href="view_equipment.php">Equipment</a>
         <a href="edit_profile.php">Settings</a>
-        <a href="logout.php">Logout</a>
     </nav>
 </header>
 
@@ -137,50 +245,76 @@ $history_result = $stmt->get_result();
         <div class="message"><?php echo $_SESSION['confirmation_message']; unset($_SESSION['confirmation_message']); ?></div>
     <?php endif; ?>
 
-    <form method="POST">
-        <label>Username:</label>
+    <?php if (!empty($user['profile_image'])): ?>
+        <img src="<?php echo htmlspecialchars($user['profile_image']); ?>" alt="Profile Picture" class="profile">
+    <?php endif; ?>
+
+    <form method="POST" enctype="multipart/form-data">
+        <label>Username</label>
         <input type="text" name="username" value="<?php echo htmlspecialchars($user['username']); ?>" required>
 
-        <label>Email:</label>
+        <label>Email</label>
         <input type="email" name="email" value="<?php echo htmlspecialchars($user['email']); ?>" required>
 
-        <label>New Password (leave blank to keep current):</label>
+        <label>New Password (optional)</label>
         <input type="password" name="password">
 
-        <label>Confirm New Password:</label>
+        <label>Confirm Password</label>
         <input type="password" name="confirm_password">
 
-        <button type="submit">Update Profile</button>
+        <label>Profile Picture</label>
+        <input type="file" name="profile_image" accept="image/*">
+
+        <button type="submit">💾 Save Changes</button>
     </form>
 
-    <h2>Borrowing History</h2>
-    <table>
-        <tr>
-            <th>Equipment</th>
-            <th>Status</th>
-            <th>Borrowed Date</th>
-            <th>Return Date</th>
-            <th>Returned Date</th>
-        </tr>
-        <?php while ($row = $history_result->fetch_assoc()) {
-            $status = strtolower($row['status']);
-            $badgeClass = match($status) {
-                'borrowed' => 'badge borrowed',
-                'overdue' => 'badge overdue',
-                'returned' => 'badge returned',
-                default => 'badge',
-            };
-        ?>
-        <tr>
-            <td><?php echo htmlspecialchars($row['name']); ?></td>
-            <td><span class="<?php echo $badgeClass; ?>"><?php echo ucfirst($status); ?></span></td>
-            <td><?php echo htmlspecialchars($row['borrow_date']); ?></td>
-            <td><?php echo htmlspecialchars($row['return_date']); ?></td>
-            <td><?php echo $row['returned_date'] ? htmlspecialchars($row['returned_date']) : 'Not Returned'; ?></td>
-        </tr>
-        <?php } ?>
-    </table>
+    <form action="logout.php" method="POST" onsubmit="return confirm('Are you sure you want to logout?');" style="text-align: left;">
+        <button class="logout-btn">🔒 Logout</button>
+    </form>
+
+    <button class="toggle-btn" onclick="toggleHistory()">📂 Borrowing History</button>
+
+    <div id="historyContainer" style="display: none;">
+        <h2>Borrowing History</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Equipment</th>
+                    <th>Status</th>
+                    <th>Borrow Date</th>
+                    <th>Return Date</th>
+                    <th>Returned Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php while ($row = $history_result->fetch_assoc()): 
+                    $status = strtolower($row['status']);
+                    $badgeClass = match($status) {
+                        'borrowed' => 'badge borrowed',
+                        'overdue' => 'badge overdue',
+                        'returned' => 'badge returned',
+                        default => 'badge',
+                    };
+                ?>
+                <tr>
+                    <td><?php echo htmlspecialchars($row['name']); ?></td>
+                    <td><span class="<?php echo $badgeClass; ?>"><?php echo ucfirst($status); ?></span></td>
+                    <td><?php echo htmlspecialchars($row['borrow_date']); ?></td>
+                    <td><?php echo htmlspecialchars($row['return_date']); ?></td>
+                    <td><?php echo $row['returned_date'] ? htmlspecialchars($row['returned_date']) : 'Not Returned'; ?></td>
+                </tr>
+                <?php endwhile; ?>
+            </tbody>
+        </table>
+    </div>
 </div>
+
+<script>
+function toggleHistory() {
+    const container = document.getElementById('historyContainer');
+    container.style.display = (container.style.display === 'none') ? 'block' : 'none';
+}
+</script>
 
 </body>
 </html>

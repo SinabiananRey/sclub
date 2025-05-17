@@ -67,12 +67,11 @@ $announcement_result = $conn->query($announcement_query);
 <body>
 
 <header>
-    <div>Sports Club</div>
+    <div><strong>🏋️ Sports Club</strong></div>
     <nav>
         <a href="member_dashboard.php">Home</a>
         <a href="view_equipment.php">Equipment</a>
         <a href="edit_profile.php">Settings</a>
-        <a href="logout.php">Logout</a>
     </nav>
 </header>
 

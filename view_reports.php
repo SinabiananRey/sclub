@@ -28,8 +28,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['approve_return_id'])) 
     }
 }
 
-// ✅ Fetch member borrowing records
-$member_query = "SELECT m.user_id, m.full_name, m.email, b.transaction_id, e.name AS equipment_name, b.status 
+// ✅ Fetch member borrowing records (including return dates)
+$member_query = "SELECT m.user_id, m.full_name, m.email, b.transaction_id, e.name AS equipment_name, b.status, b.return_date 
                  FROM members m
                  JOIN borrow_transactions b ON m.user_id = b.member_id
                  JOIN equipment e ON b.equipment_id = e.equipment_id
@@ -84,8 +84,7 @@ $member_result = $conn->query($member_query);
         .badge {
             padding: 5px 10px;
             border-radius: 20px;
-            font-size: 0.85em;
-            font-weight: 600;
+            font-size: 0.85em; font-weight: 600;
         }
         .borrowed { background: #facc15; color: #000; }
         .returned { background: #22c55e; color: white; }
@@ -114,26 +113,31 @@ $member_result = $conn->query($member_query);
 
     <table>
         <thead>
-            <tr><th>Full Name</th><th>Email</th><th>Equipment Borrowed</th><th>Status</th><th>Action</th></tr>
+            <tr><th>Full Name</th><th>Email</th><th>Equipment Borrowed</th><th>Status</th><th>Due Date</th><th>Action</th></tr>
         </thead>
         <tbody>
-            <?php while ($row = $member_result->fetch_assoc()) {
+            <?php while ($row = $member_result->fetch_assoc()) { 
                 $status = strtolower(trim($row['status']));
-                $is_borrowed = ($status === 'borrowed');
+               $return_date = strtotime(date("Y-m-d", strtotime($row['return_date'])));
+$current_date = strtotime(date("Y-m-d"));
+
+                // ✅ Enable button only if today is the return date or later
+                $enable_button = ($status === 'borrowed' && $current_date >= $return_date);
             ?>
                 <tr>
                     <td><?php echo htmlspecialchars($row['full_name']); ?></td>
                     <td><?php echo htmlspecialchars($row['email']); ?></td>
                     <td><?php echo htmlspecialchars($row['equipment_name']); ?></td>
                     <td>
-                        <span class="badge <?php echo $is_borrowed ? 'borrowed' : 'returned'; ?>">
+                        <span class="badge <?php echo $status === 'borrowed' ? 'borrowed' : 'returned'; ?>">
                             <?php echo ucfirst($status); ?>
                         </span>
                     </td>
+                    <td><?php echo date("F j, Y", strtotime($row['return_date'])); ?></td>
                     <td>
-                        <form method="POST" style="display: flex; justify-content: center; align-items: center; margin: 0;">
+                        <form method="POST">
                             <input type="hidden" name="approve_return_id" value="<?php echo $row['transaction_id']; ?>">
-                            <button type="submit" <?php echo !$is_borrowed ? 'disabled title="Already returned"' : ''; ?>>
+                            <button type="submit" <?php echo !$enable_button ? 'disabled title="Not due yet"' : ''; ?>>
                                 Confirm
                             </button>
                         </form>

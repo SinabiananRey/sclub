@@ -7,9 +7,11 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') {
     exit();
 }
 
-if (isset($_POST['delete_member_id'])) {
+// ✅ Handle member deletion only if no borrow transactions exist
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['delete_member_id'])) {
     $delete_id = intval($_POST['delete_member_id']);
 
+    // ✅ Check if the member has borrowing transactions
     $check_borrow_query = "SELECT COUNT(*) FROM borrow_transactions WHERE member_id = ?";
     $stmt_check = $conn->prepare($check_borrow_query);
     $stmt_check->bind_param("i", $delete_id);
@@ -19,8 +21,9 @@ if (isset($_POST['delete_member_id'])) {
     $stmt_check->close();
 
     if ($count > 0) {
-        $message = "<p class='message error'>Cannot delete member. They have active borrow transactions!</p>";
+        $message = "<p class='message error'>❌ Cannot delete member. They have active borrow transactions!</p>";
     } else {
+        // ✅ Delete member from tables
         $delete_members_query = "DELETE FROM members WHERE user_id = ?";
         $stmt_delete_members = $conn->prepare($delete_members_query);
         $stmt_delete_members->bind_param("i", $delete_id);
@@ -33,10 +36,11 @@ if (isset($_POST['delete_member_id'])) {
         $stmt_delete_users->execute();
         $stmt_delete_users->close();
 
-        $message = "<p class='message success'>Member deleted successfully!</p>";
+        $message = "<p class='message success'>✅ Member deleted successfully!</p>";
     }
 }
 
+// ✅ Fetch members list
 $query = "SELECT user_id, full_name, email, role, joined_date FROM members";
 $result = $conn->query($query);
 ?>
@@ -47,129 +51,50 @@ $result = $conn->query($query);
     <meta charset="UTF-8">
     <title>Manage Members | Sports Club</title>
     <style>
-        body {
-            margin: 0;
-            font-family: 'Segoe UI', sans-serif;
-            background: #eef1f5;
-            display: flex;
-        }
-
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #eef1f5; display: flex; }
         .sidebar {
-            width: 250px;
-            background: #003366;
-            color: white;
-            padding: 20px;
-            height: 100vh;
-            position: fixed;
-            top: 0;
-            left: 0;
+            width: 250px; background: #003366; color: white;
+            padding: 20px; height: 100vh; position: fixed; left: 0; top: 0;
         }
-
         .sidebar a {
-            display: block;
-            color: white;
-            text-decoration: none;
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 10px;
+            display: block; color: white; text-decoration: none;
+            padding: 10px; border-radius: 5px; margin-bottom: 10px;
         }
-
-        .sidebar a:hover {
-            background: #0055aa;
-        }
-
-        .container {
-            margin-left: 270px;
-            padding: 30px;
-            width: 100%;
-        }
-
-        h2 {
-            text-align: center;
-            color: #003366;
-            margin-bottom: 20px;
-        }
-
+        .sidebar a:hover { background: #0055aa; }
+        .container { margin-left: 270px; padding: 30px; width: 100%; }
+        h2 { text-align: center; color: #003366; margin-bottom: 20px; }
         .message {
-            text-align: center;
-            font-weight: 600;
-            padding: 12px 20px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-            width: 60%;
-            margin-left: auto;
-            margin-right: auto;
+            text-align: center; font-weight: 600;
+            padding: 12px 20px; border-radius: 6px;
+            margin-bottom: 20px; width: 60%;
+            margin-left: auto; margin-right: auto;
         }
-
-        .message.success {
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-
-        .message.error {
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-
+        .message.success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .message.error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
         table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            width: 100%; border-collapse: collapse;
+            background: white; border-radius: 10px;
+            overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.1);
         }
-
         th, td {
-            padding: 12px 15px;
-            border-bottom: 1px solid #ddd;
-            text-align: center;
+            padding: 12px 15px; border-bottom: 1px solid #ddd; text-align: center;
         }
-
-        th {
-            background: #003366;
-            color: white;
-            font-weight: 600;
-        }
-
-        tr:nth-child(even) {
-            background: #f9f9f9;
-        }
-
+        th { background: #003366; color: white; font-weight: 600; }
+        tr:nth-child(even) { background: #f9f9f9; }
         .delete-btn {
-            background: #dc3545;
-            color: white;
-            border: none;
-            padding: 8px 14px;
-            border-radius: 5px;
-            cursor: pointer;
+            background: #dc3545; color: white; border: none;
+            padding: 8px 14px; border-radius: 5px; cursor: pointer;
             transition: background 0.3s;
         }
-
-        .delete-btn:hover {
-            background: #c82333;
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                margin-left: 0;
-                padding: 15px;
-            }
-
-            .sidebar {
-                position: relative;
-                width: 100%;
-                height: auto;
-            }
-        }
+        .delete-btn:hover { background: #c82333; }
+        .delete-btn:disabled { background: #ccc; color: #666; cursor: not-allowed; }
     </style>
 </head>
 <body>
 
-<div class="sidebar" id="sidebar">
-    <h2><a href="admin_panel.php">Admin Panel</a></h2>
+<!-- ✅ Sidebar -->
+<div class="sidebar">
+    <h2><a href="admin_panel.php" style="color:white;">Admin Panel</a></h2>
     <a href="manage_members.php">Manage Members</a>
     <a href="manage_equipment.php">Manage Equipment</a>
     <a href="post_announcements.php">Post Announcements</a>
@@ -178,6 +103,7 @@ $result = $conn->query($query);
     <a href="logout.php">Logout</a>
 </div>
 
+<!-- ✅ Main Content -->
 <div class="container">
     <h2>Manage Members</h2>
 
@@ -195,6 +121,17 @@ $result = $conn->query($query);
         </thead>
         <tbody>
         <?php while ($row = $result->fetch_assoc()): ?>
+            <?php
+                // ✅ Check if the member has borrowing transactions
+                $check_trans_query = "SELECT COUNT(*) FROM borrow_transactions WHERE member_id = ?";
+                $stmt_trans = $conn->prepare($check_trans_query);
+                $stmt_trans->bind_param("i", $row['user_id']);
+                $stmt_trans->execute();
+                $stmt_trans->bind_result($trans_count);
+                $stmt_trans->fetch();
+                $stmt_trans->close();
+                $allow_deletion = ($trans_count == 0);
+            ?>
             <tr>
                 <td><?= htmlspecialchars($row['full_name']); ?></td>
                 <td><?= htmlspecialchars($row['email']); ?></td>
@@ -203,7 +140,7 @@ $result = $conn->query($query);
                 <td>
                     <form method="POST" onsubmit="return confirmDelete()">
                         <input type="hidden" name="delete_member_id" value="<?= $row['user_id']; ?>">
-                        <button type="submit" class="delete-btn">Delete</button>
+                        <button type="submit" class="delete-btn" <?= !$allow_deletion ? 'disabled title="Cannot delete, has transactions"' : ''; ?>>Delete</button>
                     </form>
                 </td>
             </tr>
