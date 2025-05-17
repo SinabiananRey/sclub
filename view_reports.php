@@ -2,17 +2,15 @@
 session_start();
 include 'db_connect.php';
 
-// ✅ Ensure only admins can access this page
+date_default_timezone_set('Asia/Manila');
+
+// ✅ Only allow admins
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') {
     header("Location: login.php");
     exit();
 }
 
-// ✅ Enable error reporting for debugging
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
-// ✅ Handle return approval requests
+// ✅ Handle return confirmation
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['approve_return_id'])) {
     $approve_id = $_POST['approve_return_id'];
     $approve_query = "UPDATE borrow_transactions SET returned_date = NOW(), status = 'returned' WHERE transaction_id = ?";
@@ -28,12 +26,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['approve_return_id'])) 
     }
 }
 
-// ✅ Fetch member borrowing records (including return dates)
-$member_query = "SELECT m.user_id, m.full_name, m.email, b.transaction_id, e.name AS equipment_name, b.status, b.return_date 
-                 FROM members m
-                 JOIN borrow_transactions b ON m.user_id = b.member_id
-                 JOIN equipment e ON b.equipment_id = e.equipment_id
-                 ORDER BY b.status DESC, m.full_name ASC";
+// ✅ Fetch borrowing records
+$member_query = "
+    SELECT 
+        m.user_id, 
+        m.full_name, 
+        m.email, 
+        b.transaction_id, 
+        e.name AS equipment_name, 
+        b.status, 
+        b.return_date 
+    FROM members m
+    JOIN borrow_transactions b ON m.user_id = b.member_id
+    JOIN equipment e ON b.equipment_id = e.equipment_id
+    ORDER BY b.status DESC, m.full_name ASC
+";
 $member_result = $conn->query($member_query);
 ?>
 
@@ -88,11 +95,16 @@ $member_result = $conn->query($member_query);
         }
         .borrowed { background: #facc15; color: #000; }
         .returned { background: #22c55e; color: white; }
+        .due-today {
+            color: #eab308;
+            font-weight: bold;
+            margin-left: 5px;
+        }
     </style>
 </head>
 <body>
 
-<!-- ✅ Sidebar -->
+<!-- Sidebar -->
 <div class="sidebar">
     <h2><a href="admin_panel.php" style="color:white;">Admin Panel</a></h2>
     <a href="manage_members.php">Manage Members</a>
@@ -103,7 +115,7 @@ $member_result = $conn->query($member_query);
     <a href="logout.php">Logout</a>
 </div>
 
-<!-- ✅ Main Content -->
+<!-- Main Content -->
 <div class="container">
     <h2>Member Borrowing Overview</h2>
 
@@ -113,37 +125,50 @@ $member_result = $conn->query($member_query);
 
     <table>
         <thead>
-            <tr><th>Full Name</th><th>Email</th><th>Equipment Borrowed</th><th>Status</th><th>Due Date</th><th>Action</th></tr>
+            <tr>
+                <th>Full Name</th>
+                <th>Email</th>
+                <th>Equipment Borrowed</th>
+                <th>Status</th>
+                <th>Due Date</th>
+                <th>Action</th>
+            </tr>
         </thead>
         <tbody>
-            <?php while ($row = $member_result->fetch_assoc()) { 
+            <?php while ($row = $member_result->fetch_assoc()): 
                 $status = strtolower(trim($row['status']));
-               $return_date = strtotime(date("Y-m-d", strtotime($row['return_date'])));
-$current_date = strtotime(date("Y-m-d"));
+                $due_date = new DateTime($row['return_date']);
+                $today = new DateTime();
 
-                // ✅ Enable button only if today is the return date or later
-                $enable_button = ($status === 'borrowed' && $current_date >= $return_date);
+                // ✅ Enable the return button for all borrowed items, regardless of the due date
+                $enable_button = ($status === 'borrowed');
+                $is_due_today = ($status === 'borrowed' && $today->format('Y-m-d') === $due_date->format('Y-m-d'));
             ?>
-                <tr>
-                    <td><?php echo htmlspecialchars($row['full_name']); ?></td>
-                    <td><?php echo htmlspecialchars($row['email']); ?></td>
-                    <td><?php echo htmlspecialchars($row['equipment_name']); ?></td>
-                    <td>
-                        <span class="badge <?php echo $status === 'borrowed' ? 'borrowed' : 'returned'; ?>">
-                            <?php echo ucfirst($status); ?>
-                        </span>
-                    </td>
-                    <td><?php echo date("F j, Y", strtotime($row['return_date'])); ?></td>
-                    <td>
-                        <form method="POST">
-                            <input type="hidden" name="approve_return_id" value="<?php echo $row['transaction_id']; ?>">
-                            <button type="submit" <?php echo !$enable_button ? 'disabled title="Not due yet"' : ''; ?>>
-                                Confirm
-                            </button>
-                        </form>
-                    </td>
-                </tr>
-            <?php } ?>
+            <tr>
+                <td><?php echo htmlspecialchars($row['full_name']); ?></td>
+                <td><?php echo htmlspecialchars($row['email']); ?></td>
+                <td><?php echo htmlspecialchars($row['equipment_name']); ?></td>
+                <td>
+                    <span class="badge <?php echo $status === 'borrowed' ? 'borrowed' : 'returned'; ?>">
+                        <?php echo ucfirst($status); ?>
+                    </span>
+                </td>
+                <td>
+                    <?php echo $due_date->format("F j, Y"); ?>
+                    <?php if ($is_due_today): ?>
+                        <span class="due-today">(Due Today)</span>
+                    <?php endif; ?>
+                </td>
+                <td>
+                    <form method="POST">
+                        <input type="hidden" name="approve_return_id" value="<?php echo $row['transaction_id']; ?>">
+                        <button type="submit" <?php echo !$enable_button ? 'disabled title="Only borrowed items can be returned"' : ''; ?>>
+                            Confirm
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            <?php endwhile; ?>
         </tbody>
     </table>
 </div>

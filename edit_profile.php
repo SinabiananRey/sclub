@@ -9,13 +9,13 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'member') {
 
 $member_id = $_SESSION['user_id'];
 
-// ✅ Fix: Only update to 'overdue' if not returned
+// ✅ Update overdue items only if the return date has passed for 1 day and it's not returned yet
 $update_status_query = "UPDATE borrow_transactions  
                         SET status = 'overdue'  
                         WHERE member_id = ? 
-                          AND return_date < NOW() 
+                          AND return_date < NOW() - INTERVAL 1 DAY
                           AND (status IS NULL OR status = '' OR status = 'borrowed') 
-                          AND returned_date IS NULL";
+                          AND (returned_date IS NULL OR returned_date = '')";
 $stmt = $conn->prepare($update_status_query);
 $stmt->bind_param("i", $member_id);
 $stmt->execute();
@@ -94,12 +94,12 @@ $history_result = $stmt->get_result();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <style>
+        /* Same styling as you had */
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: 'Inter', sans-serif;
             background: #f1f5f9;
             color: #333;
-            line-height: 1.6;
         }
         header {
             background:  #1e3a8a;
@@ -114,11 +114,8 @@ $history_result = $stmt->get_result();
             margin-left: 1rem;
             text-decoration: none;
             font-weight: 500;
-            transition: color 0.3s;
         }
-        nav a:hover {
-            color: #fff;
-        }
+        nav a:hover { color: #fff; }
         .container {
             max-width: 900px;
             margin: 40px auto;
@@ -127,62 +124,32 @@ $history_result = $stmt->get_result();
             border-radius: 12px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.05);
         }
-        h2 {
-            text-align: center;
-            color: #0f172a;
-            margin-bottom: 25px;
-        }
+        h2 { text-align: center; color: #0f172a; margin-bottom: 25px; }
         label {
-            display: block;
-            margin-top: 15px;
-            font-weight: 600;
-            color: #334155;
+            display: block; margin-top: 15px; font-weight: 600; color: #334155;
         }
         input[type="text"],
         input[type="email"],
         input[type="password"],
         input[type="file"] {
-            width: 100%;
-            padding: 12px;
-            margin-top: 8px;
-            border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            background: #f8fafc;
+            width: 100%; padding: 12px; margin-top: 8px;
+            border: 1px solid #cbd5e1; border-radius: 6px; background: #f8fafc;
         }
         button {
-            margin-top: 25px;
-            padding: 12px 20px;
-            background-color: #3b82f6;
-            color: #fff;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
+            margin-top: 25px; padding: 12px 20px;
+            background-color: #3b82f6; color: #fff;
+            border: none; border-radius: 6px; cursor: pointer;
             font-weight: 600;
-            transition: background-color 0.3s;
         }
-        button:hover {
-            background-color: #2563eb;
-        }
-        .toggle-btn {
-            background-color: #0ea5e9;
-        }
-        .toggle-btn:hover {
-            background-color: #0284c7;
-        }
-        .logout-btn {
-            background-color: #ef4444;
-        }
-        .logout-btn:hover {
-            background-color: #dc2626;
-        }
+        button:hover { background-color: #2563eb; }
+        .toggle-btn { background-color: #0ea5e9; }
+        .toggle-btn:hover { background-color: #0284c7; }
+        .logout-btn { background-color: #ef4444; }
+        .logout-btn:hover { background-color: #dc2626; }
         .message {
-            background-color: #dbeafe;
-            color: #1e3a8a;
-            padding: 15px;
-            border-radius: 8px;
-            text-align: center;
-            margin-top: 20px;
-            font-weight: 500;
+            background-color: #dbeafe; color: #1e3a8a;
+            padding: 15px; border-radius: 8px;
+            text-align: center; margin-top: 20px; font-weight: 500;
         }
         .error {
             color: #dc2626;
@@ -198,18 +165,12 @@ $history_result = $stmt->get_result();
             border: 4px solid #e2e8f0;
         }
         table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 25px;
+            width: 100%; border-collapse: collapse; margin-top: 25px;
         }
         th, td {
-            padding: 12px;
-            border-bottom: 1px solid #e2e8f0;
-            text-align: center;
+            padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: center;
         }
-        th {
-            background: #f8fafc;
-        }
+        th { background: #f8fafc; }
         .badge {
             padding: 6px 12px;
             border-radius: 9999px;
@@ -301,7 +262,11 @@ $history_result = $stmt->get_result();
                     <td><span class="<?php echo $badgeClass; ?>"><?php echo ucfirst($status); ?></span></td>
                     <td><?php echo htmlspecialchars($row['borrow_date']); ?></td>
                     <td><?php echo htmlspecialchars($row['return_date']); ?></td>
-                    <td><?php echo $row['returned_date'] ? htmlspecialchars($row['returned_date']) : 'Not Returned'; ?></td>
+                    <td>
+                        <?php echo (!empty($row['returned_date']) && $row['returned_date'] !== '0000-00-00 00:00:00')
+                            ? htmlspecialchars($row['returned_date'])
+                            : 'Not Returned'; ?>
+                    </td>
                 </tr>
                 <?php endwhile; ?>
             </tbody>
@@ -310,10 +275,10 @@ $history_result = $stmt->get_result();
 </div>
 
 <script>
-function toggleHistory() {
-    const container = document.getElementById('historyContainer');
-    container.style.display = (container.style.display === 'none') ? 'block' : 'none';
-}
+    function toggleHistory() {
+        const historyContainer = document.getElementById('historyContainer');
+        historyContainer.style.display = historyContainer.style.display === 'none' ? 'block' : 'none';
+    }
 </script>
 
 </body>
