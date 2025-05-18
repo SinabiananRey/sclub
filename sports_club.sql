@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 16, 2025 at 01:07 AM
+-- Generation Time: May 18, 2025 at 12:30 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -56,25 +56,30 @@ CREATE TABLE `borrow_transactions` (
   `member_id` int(11) NOT NULL,
   `equipment_id` int(11) NOT NULL,
   `borrow_date` timestamp NOT NULL DEFAULT current_timestamp(),
-  `return_date` datetime DEFAULT NULL,
-  `status` enum('borrowed','returned') DEFAULT 'borrowed',
-  `returned_date` timestamp NULL DEFAULT NULL
+  `return_date` date DEFAULT NULL,
+  `status` varchar(20) DEFAULT NULL,
+  `returned_date` timestamp NULL DEFAULT NULL,
+  `notified` tinyint(1) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `borrow_transactions`
 --
 
-INSERT INTO `borrow_transactions` (`transaction_id`, `member_id`, `equipment_id`, `borrow_date`, `return_date`, `status`, `returned_date`) VALUES
-(26, 1011, 12, '2025-05-11 13:39:40', '2025-05-11 00:00:00', 'returned', '2025-05-14 23:32:22'),
-(27, 1011, 15, '2025-05-14 23:33:20', '2025-05-15 00:00:00', 'returned', '2025-05-15 11:58:01'),
-(28, 1012, 15, '2025-05-15 11:38:02', '2025-05-16 00:00:00', 'returned', '2025-05-15 11:38:29'),
-(30, 1011, 14, '2025-05-15 12:08:04', '2025-05-15 00:00:00', 'returned', '2025-05-15 12:08:10'),
-(32, 1011, 12, '2025-05-15 12:19:53', '2025-05-15 00:00:00', 'returned', '2025-05-15 12:37:09'),
-(33, 1011, 14, '2025-05-15 12:34:25', '2025-05-15 00:00:00', 'returned', '2025-05-15 12:37:07'),
-(34, 1011, 14, '2025-05-15 12:37:33', '2025-05-15 00:00:00', 'returned', '2025-05-15 12:49:22'),
-(35, 1011, 12, '2025-05-15 13:49:51', '2025-05-15 00:00:00', 'returned', '2025-05-15 13:55:01'),
-(36, 1011, 12, '2025-05-15 22:17:43', '2025-05-16 00:00:00', 'borrowed', NULL);
+INSERT INTO `borrow_transactions` (`transaction_id`, `member_id`, `equipment_id`, `borrow_date`, `return_date`, `status`, `returned_date`, `notified`) VALUES
+(91, 1030, 24, '2025-05-17 07:17:56', '2025-05-17', 'returned', '2025-05-17 07:18:54', 0),
+(93, 1032, 25, '2025-05-17 07:21:37', '2025-05-17', 'returned', '2025-05-17 07:22:54', 0),
+(94, 1033, 26, '2025-05-17 07:24:08', '2025-05-17', 'returned', '2025-05-17 11:33:05', 0),
+(95, 1033, 25, '2025-05-17 08:19:15', '2025-05-17', 'returned', '2025-05-17 08:19:41', 0),
+(96, 1034, 25, '2025-05-17 08:25:54', '2025-05-17', 'returned', '2025-05-17 08:26:18', 0),
+(97, 1033, 26, '2025-05-17 11:36:58', '2025-05-17', 'returned', '2025-05-17 11:45:01', 0),
+(98, 1033, 25, '2025-05-17 11:45:27', '2025-05-17', 'returned', '2025-05-17 11:45:43', 0),
+(99, 1033, 26, '2025-05-17 11:53:32', '2025-05-17', 'returned', '2025-05-17 12:21:37', 0),
+(100, 1033, 26, '2025-05-17 12:42:06', '2025-05-17', 'returned', '2025-05-17 12:42:51', 0),
+(101, 1033, 24, '2025-05-18 02:34:45', '2025-05-18', 'returned', '2025-05-18 02:35:12', 0),
+(102, 1032, 24, '2025-05-18 02:36:15', '2025-05-19', 'returned', '2025-05-18 02:36:44', 0),
+(103, 1033, 28, '2025-05-18 05:13:32', '2025-05-19', 'returned', '2025-05-18 05:17:47', 0),
+(105, 1033, 24, '2025-05-18 10:21:44', '2025-05-18', 'returned', '2025-05-18 10:26:05', 0);
 
 -- --------------------------------------------------------
 
@@ -87,18 +92,20 @@ CREATE TABLE `equipment` (
   `name` varchar(100) NOT NULL,
   `quantity` int(11) NOT NULL,
   `status` enum('available','borrowed','maintenance') DEFAULT 'available',
-  `stock` int(11) NOT NULL DEFAULT 0
+  `stock` int(11) NOT NULL DEFAULT 0,
+  `image_path` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `equipment`
 --
 
-INSERT INTO `equipment` (`equipment_id`, `name`, `quantity`, `status`, `stock`) VALUES
-(12, 'basketball', 0, 'available', 2),
-(14, 'frisbee disc', 0, 'available', 9),
-(15, 'volleyball net', 0, 'available', 2),
-(18, 'Badminton', 0, 'available', 10);
+INSERT INTO `equipment` (`equipment_id`, `name`, `quantity`, `status`, `stock`, `image_path`) VALUES
+(24, 'basketball', 0, 'available', 15, 'uploads/1747465859_Basketball.png'),
+(25, 'frisbee disc', 0, 'available', 14, 'uploads/1747465870_images (2).jpg'),
+(26, 'volleyball', 0, 'available', 19, 'uploads/1747485634_images (3).jpg'),
+(27, 'Cones', 0, 'available', 10, 'uploads/1747486127_images (4).jpg'),
+(28, 'volleyball net', 0, 'available', 4, 'uploads/1747486250_images (5).jpg');
 
 -- --------------------------------------------------------
 
@@ -121,8 +128,10 @@ CREATE TABLE `members` (
 --
 
 INSERT INTO `members` (`member_id`, `user_id`, `full_name`, `email`, `joined_date`, `password`, `role`) VALUES
-(49, 1011, 'Rey Sinabianan', '20212010@nbsc.edu.ph', '2025-05-11', '$2y$10$vbvGnTtYv4Pvk8Eep5RWrefkV68cbC0qfKl2NuR2WiNQm39EhS30W', 'member'),
-(50, 1012, 'Mary Ann Sarol', '20231791@nbsc.edu.ph', '2025-05-15', '$2y$10$TRam.EeB7w.UFF6ZSHGNjuB9mR.6LD6zGtvmhzTw1QZ6TPTkLSnra', 'member');
+(68, 1030, 'Jam Piodos', '20221071@nbsc.edu.ph', '2025-05-17', '$2y$10$OfzF.Ma32kbptL2ASQyxcuQvPpghbDlVcDzIxBX4ahmTMd4YqCfNy', 'member'),
+(70, 1032, 'Loren Dacol', '20212051@nbsc.edu.ph', '2025-05-17', '$2y$10$ubTHQPSQMX2T88EiqyxPcekw4efVjC/LD2VmJjkz4iy76NBI0PVCi', 'member'),
+(71, 1033, 'Rey Sinabianan', '20212010@nbsc.edu.ph', '2025-05-17', '$2y$10$9Ry5qDIOxzA1WguxfFBW9uBc79eMPfwJJ9BZ9wVRQQmnLW3FU6LKO', 'member'),
+(72, 1034, 'Joash RautRaut', '20212140@nbsc.edu.ph', '2025-05-17', '$2y$10$sURMOTUaX/94iu9NTuKQD./dLnSoBT0g1dhkv/oTNc1I3PCjUG5R6', 'member');
 
 -- --------------------------------------------------------
 
@@ -142,7 +151,7 @@ CREATE TABLE `settings` (
 --
 
 INSERT INTO `settings` (`id`, `club_name`, `admin_email`, `borrowing_limit`) VALUES
-(1, 'Sports Club', 'sinabiananrey@gmail.com', 5);
+(1, 'Sports Club', 'sinabiananrey@gmail.com', 3);
 
 -- --------------------------------------------------------
 
@@ -157,17 +166,21 @@ CREATE TABLE `users` (
   `role` enum('admin','member') NOT NULL,
   `email` varchar(255) NOT NULL,
   `verification_code` varchar(255) NOT NULL,
-  `verified` tinyint(1) DEFAULT 0
+  `verified` tinyint(1) DEFAULT 0,
+  `profile_image` varchar(255) DEFAULT 'uploads/default-profile.png'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`user_id`, `username`, `password`, `role`, `email`, `verification_code`, `verified`) VALUES
-(1, 'Taloy', '$2y$10$IYjcpO.SpqLGSSypbrjtCehNFVL/zvt18fWfMW3Ve31JjLpHmwZMm', 'admin', 'sinabiananrey@gmail.com', '', 1),
-(1011, 'user4098', '$2y$10$vbvGnTtYv4Pvk8Eep5RWrefkV68cbC0qfKl2NuR2WiNQm39EhS30W', 'member', '20212010@nbsc.edu.ph', '', 1),
-(1012, 'user8873', '$2y$10$TRam.EeB7w.UFF6ZSHGNjuB9mR.6LD6zGtvmhzTw1QZ6TPTkLSnra', 'member', '20231791@nbsc.edu.ph', '', 1);
+INSERT INTO `users` (`user_id`, `username`, `password`, `role`, `email`, `verification_code`, `verified`, `profile_image`) VALUES
+(1, 'Taloy', '$2y$10$IYjcpO.SpqLGSSypbrjtCehNFVL/zvt18fWfMW3Ve31JjLpHmwZMm', 'admin', 'sinabiananrey@gmail.com', '', 1, 'uploads/default-profile.png'),
+(1027, 'user3517', '$2y$10$/MSqQ.MVrx5qIVp4vfvhoOrHXFXY1NMICO5sRx4gHKfTpRmpoZAca', 'member', '20221505@nbsc.edu.ph', '', 1, 'uploads/default-profile.png'),
+(1030, 'user2524', '$2y$10$OfzF.Ma32kbptL2ASQyxcuQvPpghbDlVcDzIxBX4ahmTMd4YqCfNy', 'member', '20221071@nbsc.edu.ph', '', 1, 'uploads/default-profile.png'),
+(1032, 'user1843', '$2y$10$ubTHQPSQMX2T88EiqyxPcekw4efVjC/LD2VmJjkz4iy76NBI0PVCi', 'member', '20212051@nbsc.edu.ph', '', 1, 'uploads/default-profile.png'),
+(1033, 'user4012', '$2y$10$9Ry5qDIOxzA1WguxfFBW9uBc79eMPfwJJ9BZ9wVRQQmnLW3FU6LKO', 'member', '20212010@nbsc.edu.ph', '', 1, 'uploads/saraum.png'),
+(1034, 'user4920', '$2y$10$sURMOTUaX/94iu9NTuKQD./dLnSoBT0g1dhkv/oTNc1I3PCjUG5R6', 'member', '20212140@nbsc.edu.ph', '', 1, 'uploads/default-profile.png');
 
 --
 -- Indexes for dumped tables
@@ -222,25 +235,25 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `announcements`
 --
 ALTER TABLE `announcements`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- AUTO_INCREMENT for table `borrow_transactions`
 --
 ALTER TABLE `borrow_transactions`
-  MODIFY `transaction_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=37;
+  MODIFY `transaction_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=106;
 
 --
 -- AUTO_INCREMENT for table `equipment`
 --
 ALTER TABLE `equipment`
-  MODIFY `equipment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+  MODIFY `equipment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
 
 --
 -- AUTO_INCREMENT for table `members`
 --
 ALTER TABLE `members`
-  MODIFY `member_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=53;
+  MODIFY `member_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=74;
 
 --
 -- AUTO_INCREMENT for table `settings`
@@ -252,7 +265,7 @@ ALTER TABLE `settings`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1015;
+  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1036;
 
 --
 -- Constraints for dumped tables

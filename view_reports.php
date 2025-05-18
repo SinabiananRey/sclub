@@ -39,9 +39,31 @@ $member_query = "
     FROM members m
     JOIN borrow_transactions b ON m.user_id = b.member_id
     JOIN equipment e ON b.equipment_id = e.equipment_id
-    ORDER BY b.status DESC, m.full_name ASC
+    ORDER BY m.full_name ASC, b.status DESC
 ";
+
 $member_result = $conn->query($member_query);
+
+// Group records by member
+$grouped_records = [];
+$borrowed_count = 0;
+
+while ($row = $member_result->fetch_assoc()) {
+    $user_id = $row['user_id'];
+    if (!isset($grouped_records[$user_id])) {
+        $grouped_records[$user_id] = [
+            'full_name' => $row['full_name'],
+            'email' => $row['email'],
+            'borrowings' => []
+        ];
+    }
+
+    if (strtolower(trim($row['status'])) === 'borrowed') {
+        $borrowed_count++;
+    }
+
+    $grouped_records[$user_id]['borrowings'][] = $row;
+}
 ?>
 
 <!DOCTYPE html>
@@ -61,23 +83,41 @@ $member_result = $conn->query($member_query);
         }
         .sidebar a:hover { background: #0055aa; }
         .container { margin-left: 270px; padding: 30px; width: 100%; }
-        h2 { text-align: center; color: #003366; margin-bottom: 20px; }
+        h2 {
+            text-align: center; color: #003366; margin-bottom: 10px;
+            cursor: pointer;
+        }
         .message {
             text-align: center; font-weight: 600;
             padding: 12px 20px; border-radius: 6px;
             margin-bottom: 20px; background: #fff3cd; color: #856404;
         }
+        .alert {
+            text-align: center; font-weight: bold;
+            color: #d97706; margin-bottom: 20px;
+        }
+        .member-box {
+            background: white;
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+        .member-box h3 {
+            margin: 0 0 5px;
+            color: #003366;
+        }
+        .member-box small {
+            color: #666;
+        }
         table {
             width: 100%; border-collapse: collapse;
-            background: white; border-radius: 10px;
-            overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-            margin-top: 30px;
+            margin-top: 10px;
         }
         th, td {
-            padding: 12px 15px; border-bottom: 1px solid #ddd; text-align: center;
+            padding: 10px 12px; border-bottom: 1px solid #ddd; text-align: center;
         }
-        th { background: #003366; color: white; font-weight: 600; }
-        tr:nth-child(even) { background: #f9f9f9; }
+        th { background: #f0f4f8; font-weight: bold; }
         button {
             padding: 6px 10px; background-color: #3b82f6;
             color: white; border: none; border-radius: 4px;
@@ -117,61 +157,75 @@ $member_result = $conn->query($member_query);
 
 <!-- Main Content -->
 <div class="container">
-    <h2>Member Borrowing Overview</h2>
+    <h2 onclick="toggleTable()">Member Borrowing Overview</h2>
+
+    <?php if ($borrowed_count > 0): ?>
+        <div class="alert">⚠️ There are <?= $borrowed_count ?> borrowed equipment(s) to confirm return!</div>
+    <?php endif; ?>
 
     <?php if (isset($_SESSION['confirmation_message'])): ?>
         <div class="message"><?php echo $_SESSION['confirmation_message']; unset($_SESSION['confirmation_message']); ?></div>
     <?php endif; ?>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Full Name</th>
-                <th>Email</th>
-                <th>Equipment Borrowed</th>
-                <th>Status</th>
-                <th>Due Date</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php while ($row = $member_result->fetch_assoc()): 
-                $status = strtolower(trim($row['status']));
-                $due_date = new DateTime($row['return_date']);
-                $today = new DateTime();
+    <div id="borrowingTable" style="display: none;">
+        <?php foreach ($grouped_records as $member): ?>
+            <div class="member-box">
+                <h3><?= htmlspecialchars($member['full_name']) ?></h3>
+                <small><?= htmlspecialchars($member['email']) ?></small>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Equipment</th>
+                            <th>Status</th>
+                            <th>Due Date</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($member['borrowings'] as $borrow): 
+                            $status = strtolower(trim($borrow['status']));
+                            $due_date = new DateTime($borrow['return_date']);
+                            $today = new DateTime();
 
-                // ✅ Enable the return button for all borrowed items, regardless of the due date
-                $enable_button = ($status === 'borrowed');
-                $is_due_today = ($status === 'borrowed' && $today->format('Y-m-d') === $due_date->format('Y-m-d'));
-            ?>
-            <tr>
-                <td><?php echo htmlspecialchars($row['full_name']); ?></td>
-                <td><?php echo htmlspecialchars($row['email']); ?></td>
-                <td><?php echo htmlspecialchars($row['equipment_name']); ?></td>
-                <td>
-                    <span class="badge <?php echo $status === 'borrowed' ? 'borrowed' : 'returned'; ?>">
-                        <?php echo ucfirst($status); ?>
-                    </span>
-                </td>
-                <td>
-                    <?php echo $due_date->format("F j, Y"); ?>
-                    <?php if ($is_due_today): ?>
-                        <span class="due-today">(Due Today)</span>
-                    <?php endif; ?>
-                </td>
-                <td>
-                    <form method="POST">
-                        <input type="hidden" name="approve_return_id" value="<?php echo $row['transaction_id']; ?>">
-                        <button type="submit" <?php echo !$enable_button ? 'disabled title="Only borrowed items can be returned"' : ''; ?>>
-                            Confirm
-                        </button>
-                    </form>
-                </td>
-            </tr>
-            <?php endwhile; ?>
-        </tbody>
-    </table>
+                            $enable_button = ($status === 'borrowed');
+                            $is_due_today = ($status === 'borrowed' && $today->format('Y-m-d') === $due_date->format('Y-m-d'));
+                        ?>
+                        <tr>
+                            <td><?= htmlspecialchars($borrow['equipment_name']) ?></td>
+                            <td>
+                                <span class="badge <?= $status === 'borrowed' ? 'borrowed' : 'returned' ?>">
+                                    <?= ucfirst($status) ?>
+                                </span>
+                            </td>
+                            <td>
+                                <?= $due_date->format("F j, Y") ?>
+                                <?php if ($is_due_today): ?>
+                                    <span class="due-today">(Due Today)</span>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <form method="POST">
+                                    <input type="hidden" name="approve_return_id" value="<?= $borrow['transaction_id'] ?>">
+                                    <button type="submit" <?= !$enable_button ? 'disabled title="Only borrowed items can be returned"' : '' ?>>
+                                        Confirm
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endforeach; ?>
+    </div>
 </div>
+
+<script>
+    function toggleTable() {
+        const table = document.getElementById('borrowingTable');
+        table.style.display = table.style.display === 'none' ? 'block' : 'none';
+    }
+</script>
 
 </body>
 </html>
