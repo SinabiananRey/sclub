@@ -12,32 +12,32 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['delete_member_id'])) {
     $delete_id = intval($_POST['delete_member_id']);
 
     // ✅ Check if the member has borrowing transactions
-    $check_borrow_query = "SELECT COUNT(*) FROM borrow_transactions WHERE member_id = ?";
-    $stmt_check = $conn->prepare($check_borrow_query);
-    $stmt_check->bind_param("i", $delete_id);
-    $stmt_check->execute();
-    $stmt_check->bind_result($count);
-    $stmt_check->fetch();
-    $stmt_check->close();
+   $check_borrow_query = "SELECT COUNT(*) FROM borrow_transactions WHERE member_id = ? AND status = 'borrowed'";
+$stmt_check = $conn->prepare($check_borrow_query);
+$stmt_check->bind_param("i", $delete_id);
+$stmt_check->execute();
+$stmt_check->bind_result($count);
+$stmt_check->fetch();
+$stmt_check->close();
 
-    if ($count > 0) {
-        $message = "<p class='message error'>❌ Cannot delete member. They have active borrow transactions!</p>";
-    } else {
-        // ✅ Delete member from tables
-        $delete_members_query = "DELETE FROM members WHERE user_id = ?";
-        $stmt_delete_members = $conn->prepare($delete_members_query);
-        $stmt_delete_members->bind_param("i", $delete_id);
-        $stmt_delete_members->execute();
-        $stmt_delete_members->close();
+if ($count > 0) {
+    $message = "<p class='message error'>❌ Cannot delete member. They still have unreturned equipment!</p>";
+} else {
+    // ✅ Proceed with member deletion
+    $delete_members_query = "DELETE FROM members WHERE user_id = ?";
+    $stmt_delete_members = $conn->prepare($delete_members_query);
+    $stmt_delete_members->bind_param("i", $delete_id);
+    $stmt_delete_members->execute();
+    $stmt_delete_members->close();
 
-        $delete_users_query = "DELETE FROM users WHERE user_id = ?";
-        $stmt_delete_users = $conn->prepare($delete_users_query);
-        $stmt_delete_users->bind_param("i", $delete_id);
-        $stmt_delete_users->execute();
-        $stmt_delete_users->close();
+    $delete_users_query = "DELETE FROM users WHERE user_id = ?";
+    $stmt_delete_users = $conn->prepare($delete_users_query);
+    $stmt_delete_users->bind_param("i", $delete_id);
+    $stmt_delete_users->execute();
+    $stmt_delete_users->close();
 
-        $message = "<p class='message success'>✅ Member deleted successfully!</p>";
-    }
+    $message = "<p class='message success'>✅ Member deleted successfully!</p>";
+}
 }
 
 // ✅ Fetch members list

@@ -93,6 +93,7 @@ $history_result = $stmt->get_result();
     <title>Edit Profile & History</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
         /* Same styling as you had */
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -144,8 +145,28 @@ $history_result = $stmt->get_result();
         button:hover { background-color: #2563eb; }
         .toggle-btn { background-color: #0ea5e9; }
         .toggle-btn:hover { background-color: #0284c7; }
-        .logout-btn { background-color: #ef4444; }
-        .logout-btn:hover { background-color: #dc2626; }
+        .logout-btn {
+            background-color: #ef4444; /* Red color */
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px; /* Adds space between icon and text */
+            font-size: 16px;
+        }
+
+        .logout-btn:hover {
+            background-color: #dc2626; /* Darker red on hover */
+        }
+
+        .logout-btn i {
+            font-size: 18px; /* Adjust icon size */
+        }
+
         .message {
             background-color: #dbeafe; color: #1e3a8a;
             padding: 15px; border-radius: 8px;
@@ -230,7 +251,9 @@ $history_result = $stmt->get_result();
     </form>
 
     <form action="logout.php" method="POST" onsubmit="return confirm('Are you sure you want to logout?');" style="text-align: left;">
-        <button class="logout-btn">🔒 Logout</button>
+        <button class="logout-btn"> 
+            <i class="fas fa-sign-out-alt"></i> Logout
+        </button>
     </form>
 
     <button class="toggle-btn" onclick="toggleHistory()">📂 Borrowing History</button>

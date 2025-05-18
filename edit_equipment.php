@@ -8,7 +8,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
     exit();
 }
 
-// Fetch equipment details for editing
+// Get equipment ID
 $equipment_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 if ($equipment_id === 0) {
     $_SESSION['error_message'] = "❌ Invalid equipment ID.";
@@ -16,8 +16,8 @@ if ($equipment_id === 0) {
     exit();
 }
 
-$query = "SELECT * FROM equipment WHERE equipment_id = ?";
-$stmt = $conn->prepare($query);
+// Fetch existing equipment
+$stmt = $conn->prepare("SELECT * FROM equipment WHERE equipment_id = ?");
 $stmt->bind_param("i", $equipment_id);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -29,28 +29,56 @@ if (!$equipment) {
     exit();
 }
 
-// Handle form submission for updating equipment
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $name = trim($_POST['name']);
+// Handle form submission
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    $name   = trim($_POST['name']);
     $status = $_POST['status'];
+    $stock  = intval($_POST['stock']);
+    $image_path = $equipment['image_path'];
 
-    // Input validation
     if (empty($name)) {
         $_SESSION['error_message'] = "❌ Equipment name is required.";
     } elseif (!in_array($status, ['Available', 'Borrowed', 'Maintenance'])) {
         $_SESSION['error_message'] = "❌ Invalid status.";
+    } elseif ($stock < 0) {
+        $_SESSION['error_message'] = "❌ Stock cannot be negative.";
     } else {
-        // Update equipment details in the database
-        $update_query = "UPDATE equipment SET name = ?, status = ? WHERE equipment_id = ?";
-        $stmt = $conn->prepare($update_query);
-        $stmt->bind_param("ssi", $name, $status, $equipment_id);
+        // Handle image upload
+        if (!empty($_FILES['image']['name'])) {
+            $target_dir = "uploads/";
+            if (!is_dir($target_dir)) mkdir($target_dir);
+            $filename = time() . "_" . basename($_FILES["image"]["name"]);
+            $target_file = $target_dir . $filename;
+            $imageFileType = strtolower(pathinfo($target_file, PATHINFO_EXTENSION));
+            $valid_extensions = ['jpg', 'jpeg', 'png', 'gif'];
 
-        if ($stmt->execute()) {
-            $_SESSION['confirmation_message'] = "✅ Equipment updated successfully!";
-            header("Location: manage_equipment.php");
-            exit();
-        } else {
-            $_SESSION['error_message'] = "❌ Failed to update equipment.";
+            if (in_array($imageFileType, $valid_extensions)) {
+                if (move_uploaded_file($_FILES["image"]["tmp_name"], $target_file)) {
+                    // Optionally delete old image
+                    if (!empty($equipment['image_path']) && file_exists($equipment['image_path'])) {
+                        unlink($equipment['image_path']);
+                    }
+                    $image_path = $target_file;
+                } else {
+                    $_SESSION['error_message'] = "❌ Failed to upload image.";
+                }
+            } else {
+                $_SESSION['error_message'] = "❌ Invalid file type. Only JPG, PNG, and GIF allowed.";
+            }
+        }
+
+        // Update DB
+        if (!isset($_SESSION['error_message'])) {
+            $update = $conn->prepare("UPDATE equipment SET name = ?, status = ?, stock = ?, image_path = ? WHERE equipment_id = ?");
+            $update->bind_param("ssisi", $name, $status, $stock, $image_path, $equipment_id);
+
+            if ($update->execute()) {
+                $_SESSION['confirmation_message'] = "✅ Equipment updated successfully!";
+                header("Location: manage_equipment.php");
+                exit();
+            } else {
+                $_SESSION['error_message'] = "❌ Failed to update equipment.";
+            }
         }
     }
 }
@@ -60,8 +88,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit Equipment</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -131,6 +159,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         a:hover {
             background-color: #999;
         }
+        img.preview {
+            max-width: 200px;
+            margin-bottom: 10px;
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -138,7 +171,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <div class="container">
     <h2>Edit Equipment</h2>
 
-    <!-- Display success or error message -->
     <?php if (isset($_SESSION['confirmation_message'])): ?>
         <div class="message success"><?php echo $_SESSION['confirmation_message']; unset($_SESSION['confirmation_message']); ?></div>
     <?php endif; ?>
@@ -147,16 +179,27 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <div class="message error"><?php echo $_SESSION['error_message']; unset($_SESSION['error_message']); ?></div>
     <?php endif; ?>
 
-    <form method="POST" action="edit_equipment.php?id=<?php echo $equipment['equipment_id']; ?>">
+    <form method="POST" enctype="multipart/form-data">
         <label for="name">Name:</label>
-        <input type="text" id="name" name="name" value="<?php echo htmlspecialchars($equipment['name']); ?>" required>
+        <input type="text" name="name" value="<?php echo htmlspecialchars($equipment['name']); ?>" required>
 
         <label for="status">Status:</label>
-        <select name="status" id="status">
+        <select name="status">
             <option value="Available" <?php echo $equipment['status'] === 'Available' ? 'selected' : ''; ?>>Available</option>
             <option value="Borrowed" <?php echo $equipment['status'] === 'Borrowed' ? 'selected' : ''; ?>>Borrowed</option>
             <option value="Maintenance" <?php echo $equipment['status'] === 'Maintenance' ? 'selected' : ''; ?>>Under Maintenance</option>
         </select>
+
+        <label for="stock">Stock:</label>
+        <input type="number" name="stock" min="0" value="<?php echo htmlspecialchars($equipment['stock']); ?>" required>
+
+        <label for="image">Upload New Image (optional):</label>
+        <input type="file" name="image" accept="image/*">
+
+        <?php if (!empty($equipment['image_path'])): ?>
+            <p>Current Image:</p>
+            <img src="<?php echo htmlspecialchars($equipment['image_path']); ?>" class="preview" alt="Equipment Image">
+        <?php endif; ?>
 
         <button type="submit">Update Equipment</button>
     </form>
