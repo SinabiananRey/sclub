@@ -7,6 +7,52 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'member') {
     exit();
 }
 
+// Handle terms acceptance
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accept_terms'])) {
+    $update_query = "UPDATE users SET terms_accepted = 1 WHERE user_id = ?";
+    $stmt = $conn->prepare($update_query);
+    $stmt->bind_param("i", $_SESSION['user_id']);
+    $stmt->execute();
+    $stmt->close();
+    header("Location: member_dashboard.php");
+    exit();
+}
+
+// Handle incident report submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['report_incident'])) {
+    $title = htmlspecialchars($_POST['incident_title']);
+    $description = htmlspecialchars($_POST['incident_description']);
+    $user_id = $_SESSION['user_id'];
+
+    if ($title && $description) {
+        $stmt = $conn->prepare("INSERT INTO incident_reports (user_id, title, description, reported_at) VALUES (?, ?, ?, NOW())");
+        $stmt->bind_param("iss", $user_id, $title, $description);
+
+        if ($stmt->execute()) {
+            echo "<script>alert('✅ Incident reported successfully!');</script>";
+        } else {
+            echo "<script>alert('❌ Error reporting the incident.');</script>";
+        }
+        $stmt->close();
+    } else {
+        echo "<script>alert('⚠️ All fields are required.');</script>";
+    }
+}
+
+// Check if user has accepted terms
+$show_terms_popup = false;
+$query = "SELECT terms_accepted FROM users WHERE user_id = ?";
+$stmt = $conn->prepare($query);
+$stmt->bind_param("i", $_SESSION['user_id']);
+$stmt->execute();
+$stmt->bind_result($terms_accepted);
+$stmt->fetch();
+$stmt->close();
+
+if (!$terms_accepted) {
+    $show_terms_popup = true;
+}
+
 // Fetch latest announcements
 $announcements = [];
 $query = "SELECT id, title, content, image_path, created_at FROM announcements ORDER BY created_at DESC LIMIT 5";
@@ -55,11 +101,6 @@ if ($result && $result->num_rows > 0) {
             margin-left: 1.2rem;
             text-decoration: none;
             font-weight: 500;
-            transition: opacity 0.2s ease;
-        }
-
-        nav a:hover {
-            opacity: 0.85;
         }
 
         .hero {
@@ -69,43 +110,10 @@ if ($result && $result->num_rows > 0) {
             padding: 70px 20px;
         }
 
-        .hero h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-        }
-
-        .hero p {
-            font-size: 1.1rem;
-            margin-bottom: 25px;
-        }
-
-        .hero a {
-            background: white;
-            color: #1e3a8a;
-            padding: 12px 24px;
-            border-radius: 6px;
-            font-weight: 600;
-            text-decoration: none;
-            transition: background 0.2s ease, color 0.2s ease;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-        }
-
-        .hero a:hover {
-            background: #e0e7ff;
-            color: #1d4ed8;
-        }
-
         .container {
             max-width: 900px;
             margin: 50px auto;
             padding: 0 20px;
-        }
-
-        .container h3 {
-            font-size: 1.6rem;
-            color: #1e3a8a;
-            margin-bottom: 25px;
-            text-align: center;
         }
 
         .announcement-list {
@@ -120,24 +128,10 @@ if ($result && $result->num_rows > 0) {
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-            display: flex;
-            flex-direction: column;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
             border-left: 6px solid #3b82f6;
         }
 
-        .announcement-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 6px 20px rgba(0,0,0,0.1);
-        }
-
-        .announcement-img-wrapper {
-            width: 100%;
-            background-color: #f0f4ff;
-            text-align: center;
-        }
-
-        .announcement-image {
+        .announcement-img-wrapper img {
             width: 100%;
             max-height: 240px;
             object-fit: cover;
@@ -147,25 +141,6 @@ if ($result && $result->num_rows > 0) {
             padding: 20px;
         }
 
-        .announcement-title {
-            font-size: 1.25rem;
-            color: #1e3a8a;
-            font-weight: 600;
-            margin-bottom: 10px;
-        }
-
-        .announcement-text {
-            font-size: 0.95rem;
-            color: #374151;
-            line-height: 1.6;
-            margin-bottom: 12px;
-        }
-
-        .announcement-date {
-            font-size: 0.85rem;
-            color: #6b7280;
-        }
-
         .footer {
             text-align: center;
             font-size: 0.9rem;
@@ -173,29 +148,69 @@ if ($result && $result->num_rows > 0) {
             margin: 80px 0 30px;
         }
 
-        .footer a {
-            color: #1e3a8a;
-            text-decoration: none;
-            font-weight: 500;
-        }
-
-        .footer a:hover {
-            text-decoration: underline;
-        }
-
-        .social-icons {
-            margin-top: 10px;
-        }
-
         .social-icons a {
             margin: 0 10px;
             color: #1e3a8a;
             font-size: 1.2rem;
-            transition: color 0.2s ease;
         }
 
-        .social-icons a:hover {
-            color: #2563eb;
+        /* Terms Modal */
+        .modal, .incident-modal {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 9999;
+        }
+
+        .modal-content, .incident-content {
+            background: white;
+            padding: 20px 30px;
+            border-radius: 8px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        }
+
+        .modal-content button, .incident-content button {
+            background-color: #1e3a8a;
+            color: white;
+            padding: 10px 20px;
+            margin-top: 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .incident-report-trigger {
+            background: #d97706;
+            color: white;
+            padding: 10px 20px;
+            margin: 30px auto;
+            border: none;
+            border-radius: 5px;
+            display: block;
+            cursor: pointer;
+        }
+
+        .incident-content h3 {
+            margin-bottom: 10px;
+            color: #d97706;
+            text-align: center;
+        }
+
+        .incident-content input,
+        .incident-content textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            margin: 8px 0;
+            border-radius: 5px;
+        }
+
+        .incident-content button:hover {
+            background: #b45309;
         }
 
         @media (max-width: 600px) {
@@ -230,7 +245,7 @@ if ($result && $result->num_rows > 0) {
                 <li class="announcement-card">
                     <?php if (!empty($a['image_path'])): ?>
                         <div class="announcement-img-wrapper">
-                            <img src="<?= htmlspecialchars($a['image_path']) ?>" class="announcement-image" alt="Announcement Image">
+                            <img src="<?= htmlspecialchars($a['image_path']) ?>" alt="Announcement Image">
                         </div>
                     <?php endif; ?>
                     <div class="announcement-content">
@@ -244,6 +259,9 @@ if ($result && $result->num_rows > 0) {
             <p style="text-align: center; color: #555;">No announcements at the moment.</p>
         <?php endif; ?>
     </ul>
+
+    <!-- Report Incident Button -->
+    <button class="incident-report-trigger" onclick="document.getElementById('incidentModal').style.display='flex'">⚠ Report an Incident</button>
 </div>
 
 <div class="footer">
@@ -254,6 +272,32 @@ if ($result && $result->num_rows > 0) {
         <a href="https://x.com" target="_blank"><i class="fab fa-x-twitter"></i></a>
     </div>
 </div>
+
+<!-- Incident Report Modal -->
+<div id="incidentModal" class="incident-modal" style="display:none;">
+    <div class="incident-content">
+        <h3>⚠ Report an Incident</h3>
+        <form method="POST">
+            <input type="text" name="incident_title" placeholder="Incident Title" required>
+            <textarea name="incident_description" placeholder="Describe the issue..." required></textarea>
+            <button type="submit" name="report_incident">Submit Report</button>
+            <button type="button" onclick="document.getElementById('incidentModal').style.display='none'" style="background:#ccc; color:#333; margin-left:10px;">Cancel</button>
+        </form>
+    </div>
+</div>
+
+<!-- Terms Modal -->
+<?php if ($show_terms_popup): ?>
+<div id="termsModal" class="modal">
+    <div class="modal-content">
+        <h2>📜 Terms & Conditions</h2>
+        <p>By using this system, you agree to follow club rules on equipment use and respectful conduct. Your personal data is protected under <strong>Republic Act No. 10173</strong> (Data Privacy Act of 2012).</p>
+        <form method="POST">
+            <button type="submit" name="accept_terms">Accept & Continue</button>
+        </form>
+    </div>
+</div>
+<?php endif; ?>
 
 </body>
 </html>

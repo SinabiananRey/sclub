@@ -1,21 +1,24 @@
 <?php
 session_start();
 include 'db_connect.php';
-require 'vendor/autoload.php'; // ✅ Load PHPMailer
+require 'vendor/autoload.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
+$showOtpModal = false;
+$errorMessage = '';
+
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['register'])) {
     $full_name = htmlspecialchars($_POST['full_name'], ENT_QUOTES, 'UTF-8');
     $email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
     $password = password_hash(trim($_POST['password']), PASSWORD_DEFAULT);
+    $otp = rand(100000, 999999);
 
-    // ✅ Ensure unique username
+    // Generate unique username
     do {
         $username = 'user' . rand(1000, 9999);
-        $query_check_username = "SELECT COUNT(*) AS count FROM users WHERE username = ?";
-        $stmt_check = $conn->prepare($query_check_username);
+        $stmt_check = $conn->prepare("SELECT COUNT(*) FROM users WHERE username = ?");
         $stmt_check->bind_param("s", $username);
         $stmt_check->execute();
         $stmt_check->bind_result($count);
@@ -23,182 +26,283 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $stmt_check->close();
     } while ($count > 0);
 
-    // ✅ Insert user into `users` table
-    $query_users = "INSERT INTO users (username, email, password, role, verified) 
-                    VALUES (?, ?, ?, 'member', 1)";
-    $stmt_users = $conn->prepare($query_users);
-    $stmt_users->bind_param("sss", $username, $email, $password);
-    
+    // Insert user
+    $stmt_users = $conn->prepare("INSERT INTO users (username, email, password, role, otp, verified) VALUES (?, ?, ?, 'member', ?, 0)");
+    $stmt_users->bind_param("sssi", $username, $email, $password, $otp);
+
     if ($stmt_users->execute()) {
         $user_id = $stmt_users->insert_id;
         $stmt_users->close();
 
-        // ✅ Insert user into `members` table
-        $query_members = "INSERT INTO members (user_id, full_name, email, password, role, joined_date) 
-                          VALUES (?, ?, ?, ?, 'member', CURDATE())";
-        $stmt_members = $conn->prepare($query_members);
+        // Insert member details
+        $stmt_members = $conn->prepare("INSERT INTO members (user_id, full_name, email, password, role, joined_date) VALUES (?, ?, ?, ?, 'member', CURDATE())");
         $stmt_members->bind_param("isss", $user_id, $full_name, $email, $password);
         $stmt_members->execute();
         $stmt_members->close();
 
-        // ✅ Send confirmation email using PHPMailer
+        // Send OTP email
         $mail = new PHPMailer(true);
         try {
-            // ✅ Secure SMTP configuration
             $mail->isSMTP();
             $mail->Host = 'smtp.gmail.com';
             $mail->SMTPAuth = true;
-            $mail->Username = 'sinabiananrey@gmail.com'; // ✅ Gmail address
-            $mail->Password = 'rard mpnw rozl pqbr';         // ✅ Gmail App Password
+            $mail->Username = 'sinabiananrey@gmail.com';
+            $mail->Password = 'rard mpnw rozl pqbr'; // App-specific password
             $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
             $mail->Port = 587;
-            $mail->SMTPDebug = 2; // ✅ Enable debugging for errors
-            $mail->Debugoutput = 'html'; // ✅ Make errors readable
-            
-            // ✅ Email setup
+
             $mail->setFrom('sinabiananrey@gmail.com', 'Sports Club Admin');
             $mail->addAddress($email);
-            $mail->Subject = 'Welcome to the Sports Club!';
-            $mail->Body = "Hello $full_name,\n\nWelcome to the Sports Club! Your membership has been successfully registered.\n\nEnjoy your journey with us!\n\nBest regards,\nSports Club Admin";
+            $mail->Subject = 'Your OTP Code';
+            $mail->Body = "Hello $full_name,\n\nYour OTP is: $otp";
 
-            // ✅ Send email and log errors if needed
             if ($mail->send()) {
-                $_SESSION['confirmation_message'] = "Registration successful! A confirmation email has been sent.";
-                header("Location: login.php?registration_success=true");
-                exit();
+                $_SESSION['registered_email'] = $email;
+                $showOtpModal = true;
             } else {
-                error_log("❌ Email Error: " . $mail->ErrorInfo); // ✅ Log errors for debugging
-                echo "<p class='error'>Email could not be sent: {$mail->ErrorInfo}</p>";
+                $errorMessage = "Email could not be sent.";
             }
         } catch (Exception $e) {
-            error_log("❌ SMTP Error: {$mail->ErrorInfo}"); // ✅ Log SMTP errors
-            echo "<p class='error'>SMTP Error: {$mail->ErrorInfo}</p>";
+            $errorMessage = "Mailer Error: {$mail->ErrorInfo}";
         }
     } else {
-        echo "<p class='error'>Error adding member: " . $stmt_users->error . "</p>";
+        $errorMessage = "Registration failed: " . $stmt_users->error;
+    }
+}
+
+// OTP Verification
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['verify_otp'])) {
+    $entered_otp = trim($_POST['otp']);
+    $email = $_SESSION['registered_email'] ?? '';
+
+    $stmt = $conn->prepare("SELECT otp FROM users WHERE email = ?");
+    $stmt->bind_param("s", $email);
+    $stmt->execute();
+    $stmt->bind_result($stored_otp);
+    $stmt->fetch();
+    $stmt->close();
+
+    if ($entered_otp === $stored_otp) {
+        $stmt = $conn->prepare("UPDATE users SET verified = 1 WHERE email = ?");
+        $stmt->bind_param("s", $email);
+        $stmt->execute();
+        $stmt->close();
+
+        unset($_SESSION['registered_email']);
+        header("Location: login.php?otp_success=true");
+        exit();
+    } else {
+        $errorMessage = "Incorrect OTP. Try again.";
+        $showOtpModal = true;
     }
 }
 ?>
-
+<!-- Replace your HTML <head> and <body> with this updated version: -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Sign Up - Sports Club</title>
-    <style>
-        body {
-            background: #f8f9fa;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            font-family: Arial, sans-serif;
-            margin: 0;
-        }
+  <meta charset="UTF-8">
+  <title>Register</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
 
-        .signup-container {
-            background: #ffffff;
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-            width: 100%;
-            max-width: 400px;
-        }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-        .signup-container h2 {
-            text-align: center;
-            color: #22336e;
-            margin-bottom: 25px;
-        }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #22336e, #556bce);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      overflow: hidden;
+    }
 
-        .signup-container label {
-            display: block;
-            margin-bottom: 6px;
-            font-weight: 600;
-        }
+    .signup-container {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      padding: 40px;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      animation: fadeIn 0.5s ease-in-out;
+      color: #fff;
+    }
 
-        .signup-container input {
-            width: 100%;
-            padding: 12px;
-            margin-bottom: 16px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            font-size: 14px;
-        }
+    .signup-container h2 {
+      text-align: center;
+      margin-bottom: 24px;
+      font-weight: 600;
+      font-size: 28px;
+    }
 
-        .signup-container button {
-            width: 100%;
-            padding: 12px;
-            background-color: #22336e;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
+    .signup-container label {
+      font-size: 14px;
+      margin-bottom: 6px;
+      display: block;
+    }
 
-        .signup-container button:hover {
-            background-color: #1a2957;
-        }
+    .signup-container input {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 20px;
+      border: none;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+      font-size: 14px;
+    }
 
-        .signup-container .login-link {
-            text-align: center;
-            margin-top: 20px;
-            font-size: 14px;
-        }
+    .signup-container input::placeholder {
+      color: #ccc;
+    }
 
-        .signup-container .login-link a {
-            color: #22336e;
-            text-decoration: none;
-            font-weight: bold;
-        }
+    .signup-container button {
+      width: 100%;
+      padding: 12px;
+      background: #00bfa6;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
 
-        .message {
-            background: #d4edda;
-            color: #155724;
-            padding: 10px;
-            margin-bottom: 15px;
-            border-radius: 5px;
-            text-align: center;
-        }
+    .signup-container button:hover {
+      background: #00a992;
+    }
 
-        .error {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 10px;
-            margin-bottom: 15px;
-            border-radius: 5px;
-            text-align: center;
-        }
-    </style>
+    .login-link {
+      text-align: center;
+      margin-top: 16px;
+      font-size: 14px;
+    }
+
+    .login-link a {
+      color: #fff;
+      text-decoration: underline;
+    }
+
+    .error {
+      background: rgba(255, 100, 100, 0.8);
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+      font-size: 14px;
+      text-align: center;
+    }
+
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(0, 0, 0, 0.6);
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+    }
+
+    .modal {
+      background: #fff;
+      padding: 30px;
+      border-radius: 16px;
+      width: 90%;
+      max-width: 400px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+      animation: slideDown 0.4s ease;
+    }
+
+    .modal h3 {
+      margin-bottom: 20px;
+      font-size: 22px;
+      color: #22336e;
+      text-align: center;
+    }
+
+    .modal input {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 20px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+
+    .modal button {
+      width: 100%;
+      padding: 12px;
+      background: #22336e;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-40px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+  </style>
 </head>
 <body>
 
-    <div class="signup-container">
-        <h2>Sign Up</h2>
+<div class="signup-container">
+  <h2>Register</h2>
 
-        <?php if (isset($_SESSION['confirmation_message'])): ?>
-            <div class="message"><?php echo $_SESSION['confirmation_message']; unset($_SESSION['confirmation_message']); ?></div>
-        <?php endif; ?>
+  <?php if (!empty($errorMessage)): ?>
+    <div class="error"><?php echo $errorMessage; ?></div>
+  <?php endif; ?>
 
-        <form method="POST">
-            <label>Full Name</label>
-            <input type="text" name="full_name" required>
+  <form method="POST">
+    <input type="hidden" name="register" value="1">
 
-            <label>Email</label>
-            <input type="email" name="email" required>
+    <label for="full_name">Full Name</label>
+    <input type="text" name="full_name" placeholder="Your full name" required>
 
-            <label>Password</label>
-            <input type="password" name="password" required>
+    <label for="email">Email</label>
+    <input type="email" name="email" placeholder="example@email.com" required>
 
-            <button type="submit">Sign Up</button>
-        </form>
+    <label for="password">Password</label>
+    <input type="password" name="password" placeholder="••••••••" required>
 
-        <div class="login-link">
-            Already have an account? <a href="login.php">Login here</a>
-        </div>
-    </div>
+    <button type="submit">Sign Up</button>
+  </form>
+
+  <div class="login-link">
+    Already have an account? <a href="login.php">Login here</a>
+  </div>
+</div>
+
+<!-- OTP Modal -->
+<div class="modal-overlay" id="otpModal">
+  <div class="modal">
+    <h3>Verify Your Email</h3>
+    <form method="POST">
+      <input type="text" name="otp" placeholder="Enter OTP" maxlength="6" required>
+      <button type="submit" name="verify_otp">Verify</button>
+    </form>
+  </div>
+</div>
+
+<?php if ($showOtpModal): ?>
+<script>
+  document.getElementById('otpModal').style.display = 'flex';
+</script>
+<?php endif; ?>
 
 </body>
 </html>

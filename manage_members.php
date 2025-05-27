@@ -100,7 +100,6 @@ $result = $conn->query($query);
     <a href="post_announcements.php">Post Announcements</a>
     <a href="view_reports.php">View Reports</a>
     <a href="settings.php">System Settings</a>
-    <a href="logout.php">Logout</a>
 </div>
 
 <!-- ✅ Main Content -->
